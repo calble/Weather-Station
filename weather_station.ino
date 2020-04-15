@@ -34,6 +34,12 @@ void hourlyUpdate();
 void resetHighLow();
 void generateTable();
 void findTrend(char *);
+void handleGraphJs();
+int range(float arr[]);
+int smallest(float arr[]);
+int largest(float arr[]);
+char* generateArray(float arr[]);
+char* generateArray(int arr[]);
 
 Task sensorTask(10000, TASK_FOREVER, &sensorUpdate);
 Task hourlyTask(1000 * 60 * 60, TASK_FOREVER, &hourlyUpdate);
@@ -69,6 +75,7 @@ void setup() {
   server.on("/json", HTTP_GET, handleJson);
   server.on("/reset", HTTP_POST, handleReset);
   server.on("/main.css", HTTP_GET, handleMainCss);
+  server.on("/graph.js", HTTP_GET, handleGraphJs);
   server.onNotFound(handleNotFound);
   server.begin();
 
@@ -106,15 +113,25 @@ void handleRoot() {
   generateTable();
   char trend[5];
   findTrend(trend);
-  
+
+  char* t = generateArray(temp);
+  char* p = generateArray(pressure);
+//  char* t = "[10,20,30,40,50,25,22,44,15,20,10,20,30,40,50,25,22,44,15,20,30,13,17,50]";
+//  char* p = "[25,22,44,15,20,10,20,30,25,22,44,15,20,10,20,30,25,22,44,15,20,10,20,30]";
   sprintf(buffer, "<!DOCTYPE html>\
   <html lang=\"en\">\
     <head>\
     <meta charset=\"UTF-8\">\
+    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\
     <title>Weather Station</title>\
     <link rel=\"stylesheet\" href=\"/main.css\"/>\
+    <script src=\"/graph.js\"></script>\
+    <script>\
+      var t = %s;\
+      var p = %s;\
+    </script>\
     </head>\
-  <body>\
+  <body onload=\"f()\">\
     <div>\
     <h1>Weather Station</h1>\
     <form method=\"post\" action=\"/reset\">\
@@ -128,6 +145,9 @@ void handleRoot() {
       <li><span>Trend:</span> %s</li>\
     </ul>\
     <h2>Historic Data</h2>\
+    <div id=\"ts\"></div>\
+    <div class=\"half\">Temperature</div>\
+    <div class=\"half\">Pressure</div>\
     <ul>\
       <li><span>Low Temperature:</span> <span>%.2f&deg;F</span> <span>(%.2f&deg;C)</span></li>\
       <li><span>High Temperature:</span> <span>%.2f&deg;F</span> <span>(%.2f&deg;C)</span></li>\
@@ -137,7 +157,9 @@ void handleRoot() {
     %s\
     </div>\
   </body>\
-  </html>", tempF, currentTemp, currentPressure, trend, tempFLow, lowTemp, tempFHigh, highTemp, lowPressure, highPressure, table);
+  </html>", t, p, tempF, currentTemp, currentPressure, trend, tempFLow, lowTemp, tempFHigh, highTemp, lowPressure, highPressure, table);
+  free(t);
+  free(p);
   server.send(200, "text/html", buffer);
 }
 
@@ -184,7 +206,7 @@ void handleReset() {
 }
 
 void handleMainCss() {
-  char css[2000];
+  char css[1500];
   
   sprintf(css, "body{background-color: lightblue; font-family: sans-serif;}\
   body>div{background-color: white; padding: 5px; margin: 10px auto; width: 90%%; max-width: 500px; border-radius: 10px;}\
@@ -195,20 +217,42 @@ void handleMainCss() {
   tbody tr:nth-child(even){background-color: #DDD;}\
   table {width: 100%%; border-radius: 0px 10px 10px 0px;}\
   td,th {margin: 2px;}\
-  .r {background-color: red; height: 10px}\
-  .b {background-color: blue; height: 10px}\
+  #ts::after{ content:\"\"; clear:both; display: table}\
+  .r {background-color: #f56642; width: 2.08%%; float: left}\
+  .b {background-color: #4299f5; width: 2.08%%; float: left}\
   .up {background-color: green}\
   .down {background-color: red}\
-  .even {background-color: yellow}");
+  .even {background-color: yellow}\
+  .half {width: 50%%; float: left; text-align: center; font-size: 12px; margin-bottom: 8px}");
 
-  for(int i=1; i <= 50; i++){
-    char g[50];
-    sprintf(g, ".s%d{width:%dpx}", i, i);
-    strcat(css, g);
-  }
+//  for(int i=1; i <= 50; i++){
+//    char g[50];
+//    int marginTop = 50 - i;
+//    sprintf(g, ".s%d{height:%dpx, margin-top: %dpx}", i, i, marginTop);
+//    strcat(css, g);
+//  }
 
-  //Serial.printf("CSS:\n%s\n", css);
+//  Serial.printf("CSS:\n%s\n", css);
   server.send(200, "text/css", css); 
+}
+
+void handleGraphJs(){
+  char* js = "function f(){\
+  t.forEach(e=>{\
+    var x = document.createElement(\"div\");\
+    x.setAttribute(\"class\",\"r\");\
+    x.setAttribute(\"style\",\"height: \" + e + \"px; margin-top: \" + (50-e) + \"px\");\
+    document.querySelector(\"#ts\").appendChild(x);\
+  });\
+  p.forEach(e=>{\
+    var x = document.createElement(\"div\");\
+    x.setAttribute(\"class\",\"b\");\
+    x.setAttribute(\"style\",\"height: \" + e + \"px; margin-top: \" + (50-e) + \"px\");\
+    document.querySelector(\"#ts\").appendChild(x);\
+  });\
+  }";
+  
+  server.send(200, "text/javascript", js);  
 }
 
 void resetHighLow() {
@@ -315,4 +359,61 @@ void findTrend(char *trend){
     sprintf(trend, "down");
     return;
   }
+}
+
+char* generateArray(int arr[]){
+    float fArr[24];
+    for(int i=0; i < 24; i++){
+      fArr[i] = (float)arr[i];
+    }
+    return generateArray(fArr);
+}
+
+char* generateArray(float arr[]){
+  int size = 2 + (2 + 1) * 24 + 5;
+  char* tempArray = (char*)malloc(sizeof(char) * size);
+  tempArray[0] = '\0';
+  strcat(tempArray, "[");
+
+  int small = smallest(temp);
+  int r = range(temp);
+
+  Serial.printf("Generate Array-- Smallest: %d, Range: %d\nValues: ", small, r);
+  int end = 1;
+  for(int i=0; i < 24; i++){
+    char b[5];
+    int scaledNumber = (int)(((temp[i] - small) / r) * 50);
+    Serial.printf("%d,", scaledNumber);
+    sprintf(b, "%d,", scaledNumber);
+    strcat(tempArray, b);
+    end += strlen(b) + 1;
+  }
+  
+  strcat(tempArray, "]");
+  Serial.printf("\nComplete: %s\n\n", tempArray);
+  return tempArray;
+}
+
+int range(float arr[]){
+  return abs(largest(arr) - smallest(arr));
+}
+
+int smallest(float arr[]){
+  int smallest = (int)arr[0];
+  for(int i=1; i < 24; i++){
+    if(arr[i] < smallest){
+      smallest = (int)arr[i];
+    }
+  }
+  return smallest;
+}
+
+int largest(float arr[]){
+  int largest = (int)arr[0];
+  for(int i=1; i < 24; i++){
+    if(arr[i] > largest){
+      largest = (int)arr[i];
+    }
+  }
+  return largest;
 }
