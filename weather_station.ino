@@ -40,6 +40,7 @@ int smallest(float arr[]);
 int largest(float arr[]);
 char* generateArray(float arr[]);
 char* generateArray(int arr[]);
+void flashIP();
 
 Task sensorTask(10000, TASK_FOREVER, &sensorUpdate);
 Task hourlyTask(1000 * 60 * 60, TASK_FOREVER, &hourlyUpdate);
@@ -61,16 +62,19 @@ void setup() {
   Serial.print("Local IP: ");
   Serial.println(WiFi.localIP());
   server.begin();
-  digitalWrite(BUILTIN_LED1, LOW); // Turn the LED ON by making the voltage LOW digitalWrite(BUILTIN_LED2, HIGH); // Turn the LED off by making the voltage HIGH delay(1000); // Wait for a second
-
+ 
   Wire.begin();
   delay(30);
   if (!bmp.begin()) {
     Serial.println("BMP180 failed to connect.");
-  } else {
-    digitalWrite(BUILTIN_LED2, LOW);
+     while(true){
+      digitalWrite(BUILTIN_LED2, LOW);  
+      delay(500);
+      digitalWrite(BUILTIN_LED2, HIGH);
+      delay(500);
+    }   
   }
-
+  
   server.on("/", HTTP_GET, handleRoot);
   server.on("/json", HTTP_GET, handleJson);
   server.on("/reset", HTTP_POST, handleReset);
@@ -86,6 +90,8 @@ void setup() {
   hourlyTask.enable();
 
   resetHighLow();
+  flashIP();
+
 }
 
 void loop() {
@@ -113,7 +119,8 @@ void handleRoot() {
   generateTable();
   char trend[5];
   findTrend(trend);
-
+  //tt is used to test the generateArray method.
+//  float tt[] = {68.2,69,70.12,70,71.55, 75, 77.3, 78, 72, 71, 70, 72.3,68.2,69,70.12,70,71.55, 75, 77.3, 78, 72, 71, 70, 72.3};
   char* t = generateArray(temp);
   char* p = generateArray(pressure);
 //  char* t = "[10,20,30,40,50,25,22,44,15,20,10,20,30,40,50,25,22,44,15,20,30,13,17,50]";
@@ -218,8 +225,8 @@ void handleMainCss() {
   table {width: 100%%; border-radius: 0px 10px 10px 0px;}\
   td,th {margin: 2px;}\
   #ts::after{ content:\"\"; clear:both; display: table}\
-  .r {background-color: #f56642; width: 2.08%%; float: left}\
-  .b {background-color: #4299f5; width: 2.08%%; float: left}\
+  .r {background-color: #f56642; width: 1.5%%; margin-right: 0.5%%; float: left}\
+  .b {background-color: #4299f5; width: 1.5%%; margin-right: 0.5%%; float: left}\
   .up {background-color: green}\
   .down {background-color: red}\
   .even {background-color: yellow}\
@@ -241,13 +248,13 @@ void handleGraphJs(){
   t.forEach(e=>{\
     var x = document.createElement(\"div\");\
     x.setAttribute(\"class\",\"r\");\
-    x.setAttribute(\"style\",\"height: \" + e + \"px; margin-top: \" + (50-e) + \"px\");\
+    x.setAttribute(\"style\",\"height: \" + (e+1) + \"px; margin-top: \" + (51-e) + \"px\");\
     document.querySelector(\"#ts\").appendChild(x);\
   });\
   p.forEach(e=>{\
     var x = document.createElement(\"div\");\
     x.setAttribute(\"class\",\"b\");\
-    x.setAttribute(\"style\",\"height: \" + e + \"px; margin-top: \" + (50-e) + \"px\");\
+    x.setAttribute(\"style\",\"height: \" + (e+1) + \"px; margin-top: \" + (51-e) + \"px\");\
     document.querySelector(\"#ts\").appendChild(x);\
   });\
   }";
@@ -375,14 +382,14 @@ char* generateArray(float arr[]){
   tempArray[0] = '\0';
   strcat(tempArray, "[");
 
-  int small = smallest(temp);
-  int r = range(temp);
+  int small = smallest(arr);
+  int r = range(arr);
 
   Serial.printf("Generate Array-- Smallest: %d, Range: %d\nValues: ", small, r);
   int end = 1;
   for(int i=0; i < 24; i++){
     char b[5];
-    int scaledNumber = (int)(((temp[i] - small) / r) * 50);
+    int scaledNumber = (int)(((arr[i] - small) / r) * 50);
     Serial.printf("%d,", scaledNumber);
     sprintf(b, "%d,", scaledNumber);
     strcat(tempArray, b);
@@ -416,4 +423,29 @@ int largest(float arr[]){
     }
   }
   return largest;
+}
+
+void flashIP(){
+  Serial.printf("LAST: %d\n",WiFi.localIP()[3]);
+  int ip = WiFi.localIP()[3];
+  int digits[3] = {ip/100, ip/10%10, ip%10};
+  
+  digitalWrite(BUILTIN_LED1, HIGH);
+  digitalWrite(BUILTIN_LED2, HIGH);
+  delay(4000);
+  for(int i=0; i < 3; i++){
+    for(int j=0; j < digits[i]; j++){
+        digitalWrite(BUILTIN_LED1, LOW);
+        digitalWrite(BUILTIN_LED2, LOW);
+        delay(300*3);
+        digitalWrite(BUILTIN_LED1, HIGH);
+        digitalWrite(BUILTIN_LED2, HIGH);
+        delay(300);
+        
+    }
+    delay(2500);
+  }
+
+  digitalWrite(BUILTIN_LED1, LOW);
+  digitalWrite(BUILTIN_LED2, HIGH);
 }
