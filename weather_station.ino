@@ -33,7 +33,7 @@ void sensorUpdate();
 void hourlyUpdate();
 void resetHighLow();
 void generateTable();
-void findTrend(char *);
+char* findTrend();
 void handleGraphJs();
 int range(float arr[]);
 int smallest(float arr[]);
@@ -117,8 +117,8 @@ void handleRoot() {
   float tempFHigh = (highTemp * 9.0 / 5.0) + 32;
 
   generateTable();
-  char trend[5];
-  findTrend(trend);
+  char* trend =  findTrend();
+  
   //tt is used to test the generateArray method.
 //  float tt[] = {68.2,69,70.12,70,71.55, 75, 77.3, 78, 72, 71, 70, 72.3,68.2,69,70.12,70,71.55, 75, 77.3, 78, 72, 71, 70, 72.3};
   char* t = generateArray(temp);
@@ -167,6 +167,7 @@ void handleRoot() {
   </html>", t, p, tempF, currentTemp, currentPressure, trend, tempFLow, lowTemp, tempFHigh, highTemp, lowPressure, highPressure, table);
   free(t);
   free(p);
+  free(trend);
   server.send(200, "text/html", buffer);
 }
 
@@ -288,9 +289,14 @@ void sensorUpdate() {
 
 void hourlyUpdate() {
   Serial.println("Hourly Update");
-  int position = hour % 24;
-  temp[position] = currentTemp;
-  pressure[position] = currentPressure;
+  //Shift old pressures down and show most recent data on the right.
+  for(int i=23; i > 0; i--){
+    temp[i-1] = temp[i];
+    pressure[i-1] = pressure[i];
+  }
+  
+  temp[23] = currentTemp;
+  pressure[23] = currentPressure;
   hour++;
 }
 
@@ -300,10 +306,10 @@ void generateTable() {
   table[0] = '\0';
   Serial.println("Generating Table");
   strcat(table, "<table><thead><th>Hour</th><th>Temperature</th><th>Pressure</th></thead><tbody>");
-  for (int i = 0; i < 24; i++) {
+  for (int i = 23; i >= 0; i--) {
     //Hour column
     strcat(table, "<tr><th>");
-    itoa(i, strNum, 10);
+    itoa((23 - i), strNum, 10);
     strcat(table, strNum);
     strcat(table, "</th>");
 
@@ -329,43 +335,49 @@ void generateTable() {
   Serial.printf("Table Complete: %d\n", s);
 }
 
-void findTrend(char *trend){
-  int past = 0;
-  int present = 0;
-  //TODO: use the hour%24 to determine oldest 12 and newest 12 hours.
-  int currentHour = hour % 24;
-  int pos = currentHour;
-  for(int i=0; i < 12; i++){
-    if(pos > 23){
-      pos = 0;
-    }
-    present += pressure[pos];
+char* findTrend(){
+  char* trend = (char*)malloc(sizeof(char) * 45);
+  trend[0] = '\0';
+  
+  if(hour < 10){
+    strcat(trend, "More data needed");
+    return trend;
   }
-  present /= 12;
-  for(int i=0; i < 12; i++){
-    if(pos > 23){
-      pos = 0;
-    }
-    past += pressure[pos];
+  
+  //high pressure
+  if(currentPressure > 102268){
+    strcat(trend, "High Pressure, ");
+  //Normal Pressure
+  }else if(currentPressure > 100914){
+    strcat(trend, "Normal Pressure, ");
+  //Low Pressure
+  }else{
+    strcat(trend, "Low Pressure, ");
   }
-  past /= 12;
 
-  if(past == 0 || present == 0){
-    sprintf(trend, "none");
-    return;
+  int change = currentPressure  - (pressure[17] + pressure[18] + pressure[19]) / 3;
+
+  if(change >= 600){
+    strcat(trend, "very rapidly rising");
+  }else if(change >= 360){
+    strcat(trend, "rapidly rising");
+  }else if(change >= 160){
+    strcat(trend, "rising");
+  }else if( change >= 15){
+    strcat(trend, "slowly rising");
+  }else if(change < 15 && change > -15){
+    strcat(trend, "steady");
+  }else if(change <= -15){
+    strcat(trend, "slowly falling");
+  }else if(change <= -160){
+    strcat(trend, "falling");
+  }else if(change <= -360){
+    strcat(trend, "rapidly falling");
+  }else{
+    strcat(trend, "very rapidly falling");
   }
-  if(abs(present-past) < 34){
-    sprintf(trend, "even");
-    return;
-  }
-  if(past < present){
-    sprintf(trend, "up");
-    return;
-  }
-  if(past > present){
-    sprintf(trend, "down");
-    return;
-  }
+  
+  return trend;
 }
 
 char* generateArray(int arr[]){
