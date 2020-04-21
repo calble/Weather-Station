@@ -2,6 +2,7 @@
 #include<Adafruit_BMP085.h>
 #include<Wire.h>
 #include <ESP8266WebServer.h>
+#include <ESP8266mDNS.h>
 #include <TaskScheduler.h>
 #include <stdlib.h>
 
@@ -62,7 +63,9 @@ void setup() {
   Serial.print("Local IP: ");
   Serial.println(WiFi.localIP());
   server.begin();
- 
+  MDNS.begin("weather");
+  MDNS.addService("http","tcp",80);
+  MDNS.addService("weather","tcp",80);
   Wire.begin();
   delay(30);
   if (!bmp.begin()) {
@@ -97,6 +100,7 @@ void setup() {
 void loop() {
   server.handleClient();
   runner.execute();
+  MDNS.update();
   //  Serial.println("Someone connnected. Reading Sensor");
   //  float pressure = bmp.readPressure();
   //  float temp = bmp.readTemperature();
@@ -117,14 +121,21 @@ void handleRoot() {
   float tempFHigh = (highTemp * 9.0 / 5.0) + 32;
 
   generateTable();
-  char* trend =  findTrend();
+//  table[0] = '\0';
   
+  char* trend =  findTrend();
+//  char* trend = (char*)malloc(sizeof(char) * 50);
+//  sprintf(trend, "XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX");
+  //Not the trend causing the reboot
+
+  //Could the problem be the generating of the graph?
   //tt is used to test the generateArray method.
 //  float tt[] = {68.2,69,70.12,70,71.55, 75, 77.3, 78, 72, 71, 70, 72.3,68.2,69,70.12,70,71.55, 75, 77.3, 78, 72, 71, 70, 72.3};
   char* t = generateArray(temp);
+  
   char* p = generateArray(pressure);
 //  char* t = "[10,20,30,40,50,25,22,44,15,20,10,20,30,40,50,25,22,44,15,20,30,13,17,50]";
-//  char* p = "[25,22,44,15,20,10,20,30,25,22,44,15,20,10,20,30,25,22,44,15,20,10,20,30]";
+//  char* p = "[25,22,44,15,20,10,20,30,25,22,44,15,20,10,20,30,25,22,44,15,20,10,20,30,31]";
   sprintf(buffer, "<!DOCTYPE html>\
   <html lang=\"en\">\
     <head>\
@@ -168,6 +179,7 @@ void handleRoot() {
   free(t);
   free(p);
   free(trend);
+  Serial.printf("Root content length: %d\n", strlen(buffer));
   server.send(200, "text/html", buffer);
 }
 
@@ -290,9 +302,9 @@ void sensorUpdate() {
 void hourlyUpdate() {
   Serial.println("Hourly Update");
   //Shift old pressures down and show most recent data on the right.
-  for(int i=23; i > 0; i--){
-    temp[i-1] = temp[i];
-    pressure[i-1] = pressure[i];
+  for(int i=0; i < 23; i++){
+    temp[i] = temp[i+1];
+    pressure[i] = pressure[i+1];
   }
   
   temp[23] = currentTemp;
@@ -303,9 +315,9 @@ void hourlyUpdate() {
 void generateTable() {
   char strNum[20];
   //reset the table buffer
-  table[0] = '\0';
+  
   Serial.println("Generating Table");
-  strcat(table, "<table><thead><th>Hour</th><th>Temperature</th><th>Pressure</th></thead><tbody>");
+  sprintf(table, "<table><thead><th>Hour</th><th>Temperature</th><th>Pressure</th></thead><tbody>");
   for (int i = 23; i >= 0; i--) {
     //Hour column
     strcat(table, "<tr><th>");
@@ -336,9 +348,9 @@ void generateTable() {
 }
 
 char* findTrend(){
-  char* trend = (char*)malloc(sizeof(char) * 45);
+  char* trend = (char*)malloc(sizeof(char) * 50);
   trend[0] = '\0';
-  
+
   if(hour < 10){
     strcat(trend, "More data needed");
     return trend;
