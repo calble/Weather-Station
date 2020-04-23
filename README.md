@@ -12,3 +12,13 @@ Upon completed boot LED1 will be on and LED2 will be off.
 * /json --> GET the JSON representation of what is on /.
 * /main.css --> GET the CSS for the / page.
 * /graph.js --> GET the javascript code for rendering the graph on the root page.
+
+# File System
+The jar file in the resources directory must be put in the propert Arduino directory to upload
+the files.
+
+Make sure you use one of the supported versions of Arduino IDE and have ESP8266 core installed.
+Download the tool archive from releases page.
+In your Arduino sketchbook directory, create tools directory if it doesn't exist yet. You can find the location of your sketchbook directory in the Arduino IDE at File > Preferences > Sketchbook location.
+Unpack the tool into tools directory (the path will look like <sketchbook directory>/tools/ESP8266FS/tool/esp8266fs.jar).
+Restart Arduino IDE.

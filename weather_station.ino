@@ -5,6 +5,7 @@
 #include <ESP8266mDNS.h>
 #include <TaskScheduler.h>
 #include <stdlib.h>
+#include <FS.h>
 
 const short int BUILTIN_LED1 = 2; //GPIO2
 const short int BUILTIN_LED2 = 16;//GPIO16
@@ -28,22 +29,30 @@ int highPressure = 0;
 int lowPressure = 0;
 
 void handleRoot();
+void handleStaticFiles();
 void handleJson();
 void handleNotFound();
 void handleReset();
-void handleMainCss();
 void sensorUpdate();
 void hourlyUpdate();
 void resetHighLow();
 void generateTable();
 char* findTrend();
-void handleGraphJs();
 int range(float arr[]);
 int smallest(float arr[]);
 int largest(float arr[]);
 char* generateArray(float arr[]);
 char* generateArray(int arr[]);
 void flashIP();
+
+String trendImage();
+float cToF(float);
+float minValue(float[], int);
+float maxValue(float[], int);
+int minValue(int[], int);
+int maxValue(int[], int);
+
+  
 
 Task sensorTask(10000, TASK_FOREVER, &sensorUpdate);
 Task hourlyTask(1000 * 60 * 60, TASK_FOREVER, &hourlyUpdate);
@@ -82,10 +91,11 @@ void setup() {
   
   server.on("/", HTTP_GET, handleRoot);
   server.on("/json", HTTP_GET, handleJson);
+  server.onNotFound(handleStaticFiles);
   server.on("/reset", HTTP_POST, handleReset);
-  server.on("/main.css", HTTP_GET, handleMainCss);
-  server.on("/graph.js", HTTP_GET, handleGraphJs);
-  server.onNotFound(handleNotFound);
+//  server.on("/main.css", HTTP_GET, handleMainCss);
+//  server.on("/graph.js", HTTP_GET, handleGraphJs);
+//  
   server.begin();
 
   runner.init();
@@ -94,6 +104,8 @@ void setup() {
   sensorTask.enable();
   hourlyTask.enable();
 
+  SPIFFS.begin();
+  
   resetHighLow();
   flashIP();
 
@@ -118,13 +130,28 @@ void handleRoot() {
   Serial.println("Handling Root");
   //  float pressure = bmp.readPressure();
   //  float temp = bmp.readTemperature();
-  float tempF = (currentTemp * 9.0 / 5.0) + 32;
-  float tempFLow = (lowTemp * 9.0 / 5.0) + 32;
-  float tempFHigh = (highTemp * 9.0 / 5.0) + 32;
+  float tempF = cToF(currentTemp);
+  float tempFLow = cToF(lowTemp);
+  float tempFHigh = cToF(highTemp);
+  //Image for trend
 
+  Serial.println("Trend Image");
+  String image = trendImage();
+  //24 hour max and min temps and pressure
+  Serial.println("tempMin");
+  float tempMin = cToF(minValue(temp, 24));
+  Serial.println("tempMax");
+  float tempMax = cToF(maxValue(temp, 24));
+  Serial.println("pressure Min");
+  int  pressureMin = minValue(pressure, 24);
+  Serial.println("Pressure max");
+  int pressureMax = maxValue(pressure, 24);
+
+  Serial.println("Generate Table");
   generateTable();
 //  table[0] = '\0';
-  
+
+  Serial.println("Find Trend");
   char* trend =  findTrend();
 //  char* trend = (char*)malloc(sizeof(char) * 50);
 //  sprintf(trend, "XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX");
@@ -133,11 +160,13 @@ void handleRoot() {
   //Could the problem be the generating of the graph?
   //tt is used to test the generateArray method.
 //  float tt[] = {68.2,69,70.12,70,71.55, 75, 77.3, 78, 72, 71, 70, 72.3,68.2,69,70.12,70,71.55, 75, 77.3, 78, 72, 71, 70, 72.3};
+  Serial.println("Generate Array temp");
   char* t = generateArray(temp);
-  
+  Serial.println("Generate Array pressure");
   char* p = generateArray(pressure);
 //  char* t = "[10,20,30,40,50,25,22,44,15,20,10,20,30,40,50,25,22,44,15,20,30,13,17,50]";
 //  char* p = "[25,22,44,15,20,10,20,30,25,22,44,15,20,10,20,30,25,22,44,15,20,10,20,30,31]";
+  Serial.println("SPRINTF");
   sprintf(buffer, "<!DOCTYPE html>\
   <html lang=\"en\">\
     <head>\
@@ -159,25 +188,28 @@ void handleRoot() {
     </form>\
     <br/>\
     <h2>Current Weather</h2>\
-    <ul>\
-      <li><span>Temperature:</span> %.2f&deg;F (%.2f&deg;C)</li>\
-      <li><span>Pressure:</span> %dPa</li>\
-      <li><span>Trend:</span> %s</li>\
-    </ul>\
+    <div class=\"current\">\
+      %.1f&deg;/\
+      <div class=\"barometer\">\
+        <div class=\"pressure\">%d<span>Pa</span></div>\
+        <div class=\"trend\">%s</div>\
+      </div>\
+      <img src=\"%s\"/>\
+    </div>\
     <h2>Historic Data</h2>\
     <div id=\"ts\"></div>\
-    <div class=\"half\">Temperature</div>\
-    <div class=\"half\">Pressure</div>\
+    <div class=\"half\">Temperature (%.2f-%.2f)</div>\
+    <div class=\"half\">Pressure (%d-%d)</div>\
     <ul>\
-      <li><span>Low Temperature:</span> <span>%.2f&deg;F</span> <span>(%.2f&deg;C)</span></li>\
-      <li><span>High Temperature:</span> <span>%.2f&deg;F</span> <span>(%.2f&deg;C)</span></li>\
-      <li><span>Low Pressure:</span> <span>%dPa</span></li>\
-      <li><span>High Pressure:</span> <span>%dPa</span></li>\
+      <li><span>Record Low Temperature:</span> <span>%.2f&deg;F</span></li>\
+      <li><span>Record High Temperature:</span> <span>%.2f&deg;F</span></li>\
+      <li><span>Record Low Pressure:</span> <span>%dPa</span></li>\
+      <li><span>Record High Pressure:</span> <span>%dPa</span></li>\
     </ul>\
     %s\
     </div>\
   </body>\
-  </html>", t, p, tempF, currentTemp, currentPressure, trend, tempFLow, lowTemp, tempFHigh, highTemp, lowPressure, highPressure, table);
+  </html>", t, p, tempF, currentPressure, trend, image.c_str(), tempMin, tempMax, pressureMin, pressureMax, tempFLow, tempFHigh, lowPressure, highPressure, table);
   free(t);
   free(p);
   free(trend);
@@ -227,54 +259,29 @@ void handleReset() {
   </html>");
 }
 
-void handleMainCss() {
-  char css[1500];
-  
-  sprintf(css, "body{background-color: lightblue; font-family: sans-serif;}\
-  body>div{background-color: white; padding: 5px; margin: 10px auto; width: 90%%; max-width: 500px; border-radius: 10px;}\
-  input[type=submit]{font-weight: bold; background-color: orange; padding: 5px; margin: 10px; float: right; color: white; border-radius: 10px}\
-  body>div>h1{float: left; margin: 10px; padding: 5px;}\
-  body>div>h2{clear: both; margin: 10px; padding: 5px;}\
-  thead{background-color: #BBB;}\
-  tbody tr:nth-child(even){background-color: #DDD;}\
-  table {width: 100%%; border-radius: 0px 10px 10px 0px;}\
-  td,th {margin: 2px;}\
-  #ts::after{ content:\"\"; clear:both; display: table}\
-  .r {background-color: #f56642; width: 1.5%%; margin-right: 0.5%%; float: left}\
-  .b {background-color: #4299f5; width: 1.5%%; margin-right: 0.5%%; float: left}\
-  .up {background-color: green}\
-  .down {background-color: red}\
-  .even {background-color: yellow}\
-  .half {width: 50%%; float: left; text-align: center; font-size: 12px; margin-bottom: 8px}");
-
-//  for(int i=1; i <= 50; i++){
-//    char g[50];
-//    int marginTop = 50 - i;
-//    sprintf(g, ".s%d{height:%dpx, margin-top: %dpx}", i, i, marginTop);
-//    strcat(css, g);
-//  }
-
-//  Serial.printf("CSS:\n%s\n", css);
-  server.send(200, "text/css", css); 
-}
-
-void handleGraphJs(){
-  char* js = "function f(){\
-  t.forEach(e=>{\
-    var x = document.createElement(\"div\");\
-    x.setAttribute(\"class\",\"r\");\
-    x.setAttribute(\"style\",\"height: \" + (e+1) + \"px; margin-top: \" + (51-e) + \"px\");\
-    document.querySelector(\"#ts\").appendChild(x);\
-  });\
-  p.forEach(e=>{\
-    var x = document.createElement(\"div\");\
-    x.setAttribute(\"class\",\"b\");\
-    x.setAttribute(\"style\",\"height: \" + (e+1) + \"px; margin-top: \" + (51-e) + \"px\");\
-    document.querySelector(\"#ts\").appendChild(x);\
-  });\
-  }";
-  
-  server.send(200, "text/javascript", js);  
+void handleStaticFiles(){
+  if(SPIFFS.exists(server.uri())){
+    String contentType;
+    if(server.uri().endsWith(".htm")){
+      contentType = "text/html";
+    }else if(server.uri().endsWith(".css")){
+      contentType = "text/css";
+    }else if(server.uri().endsWith(".js")){
+      contentType = "text/js";
+    }else if(server.uri().endsWith(".png")){
+      contentType = "image/png";
+    }else{
+      //We don't server any other type of file
+      server.send(401, "text/html", "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"UTF-8\"><title>Weather Station</title></head><body><h1>Weather Station</h1><h2>401 Unauthorized!</h2></body></html>");
+      return;    
+    }
+    File file = SPIFFS.open(server.uri(), "r");
+    server.streamFile(file, "");
+    file.close();
+  }else{
+    //File does not exist
+    server.send(404, "text/html", "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"UTF-8\"><title>Weather Station</title></head><body><h1>Weather Station</h1><h2>404 File Not Found!</h2></body></html>");
+  }
 }
 
 void resetHighLow() {
@@ -328,16 +335,12 @@ void generateTable() {
     strcat(table, "</th>");
 
     //Temperature Column
-    float fTemp = (temp[i] * 9.0 / 5.0) + 32;
+    float fTemp = cToF(temp[i]);
 
     strcat(table, "<td>");
     sprintf(strNum, "%.2f", fTemp);
     strcat(table, strNum);
-    strcat(table, "&deg;F ");
-    sprintf(strNum, "%.2f", temp[i]);
-    strcat(table, " (");
-    strcat(table, strNum);
-    strcat(table, "&deg;C)</td>");
+    strcat(table, "&deg;F </td>");
 
     //Pressure Column
     strcat(table, "<td>");
@@ -381,14 +384,14 @@ char* findTrend(){
     strcat(trend, "slowly rising");
   }else if(change < 15 && change > -15){
     strcat(trend, "steady");
-  }else if(change <= -15){
-    strcat(trend, "slowly falling");
-  }else if(change <= -160){
-    strcat(trend, "falling");
+  }else if(change < -600){
+    strcat(trend, "very rapidly falling");
   }else if(change <= -360){
     strcat(trend, "rapidly falling");
+  }else if(change <= -160){
+    strcat(trend, "falling");
   }else{
-    strcat(trend, "very rapidly falling");
+    strcat(trend, "slowly falling");
   }
   
   return trend;
@@ -474,4 +477,60 @@ void flashIP(){
 
   digitalWrite(BUILTIN_LED1, LOW);
   digitalWrite(BUILTIN_LED2, HIGH);
+}
+
+String trendImage(){
+  int change = currentPressure  - (pressure[17] + pressure[18] + pressure[19]) / 3;
+
+  if(hour < 10){
+    return "/unknown.png";
+  }
+  
+  if(change >= 160){
+    return "/big_up.png";
+  }else if(change >= 15){
+    return "/up.png";
+  }else if(change < 15 && change > -15){
+    return "/steady.png";
+  }else if(change <= -160){
+    return "/big_down.png";
+  }else{
+    return "/down.png";
+  }
+}
+
+float cToF(float c){
+  return (c * 9.0 / 5.0) + 32;
+}
+
+float minValue(float arr[], int s){
+  float v = arr[0];
+  for(int i=0; i < s; i++){
+    v = min(v, arr[i]);
+  }
+  return v;
+}
+
+float maxValue(float arr[], int s){
+  float v = arr[0];
+  for(int i=0; i < s; i++){
+    v = max(v, arr[i]);
+  }
+  return v;
+}
+
+int minValue(int arr[], int s){
+  int v = arr[0];
+  for(int i=0; i < s; i++){
+    v = min(v, arr[i]);
+  }
+  return v;
+}
+
+int maxValue(int arr[], int s){
+  int v = arr[0];
+  for(int i=0; i < s; i++){
+    v = max(v, arr[i]);
+  }
+  return v;
 }
