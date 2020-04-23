@@ -9,6 +9,8 @@
 const short int BUILTIN_LED1 = 2; //GPIO2
 const short int BUILTIN_LED2 = 16;//GPIO16
 
+#define ALTITUDE 198 //Meter above sea level of station
+
 ESP8266WebServer server(80);
 Adafruit_BMP085 bmp;
 
@@ -276,14 +278,14 @@ void handleGraphJs(){
 }
 
 void resetHighLow() {
-  lowPressure = highPressure = bmp.readPressure();
+  lowPressure = highPressure = bmp.readSealevelPressure(ALTITUDE);
   lowTemp = highTemp = bmp.readTemperature();
 }
 
 void sensorUpdate() {
   Serial.println("Sensor Update");
   currentTemp = bmp.readTemperature();
-  currentPressure = bmp.readPressure();
+  currentPressure = bmp.readSealevelPressure(ALTITUDE);
 
   if (currentTemp > highTemp) {
     highTemp = currentTemp;
