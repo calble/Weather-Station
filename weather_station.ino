@@ -232,9 +232,9 @@ void handleJson() {
   sprintf(buffer, "{\"station\":\"Ambrosse\",\n\"temperature_f\":%.2f,\n \"temperature_c\":%.2f,\n \"pressure_pa\":%d,\n \"high_temperature_f\":%.2f, \n \"high_temperature_c\":%.2f,\n \"low_temperature_f\":%.2f,\n \"high_tempurature_c\":%.2f,\n \"low_pressure\":%d,\n \"high_pressure\": %d, \"time_series\":[\n",
           tempF, currentTemp, currentPressure, tempFHigh, highTemp, tempFLow, lowTemp, lowPressure, highPressure);
 
-  for(int i=0; i < 24; i++){
+  for(int i=23; i >= 0; i--){
     char c[200];
-    sprintf(c, "{\"hour\":%d,\"temperature_c\":%.2f,\"pressure\":%d},\n", i, temp[i], pressure[i]);
+    sprintf(c, "{\"hour\":%d,\"temperature_c\":%.2f,\"pressure\":%d},\n", (23 - 1), temp[i], pressure[i]);
     strcat(buffer, c);
   }
   int len = strlen(buffer);
