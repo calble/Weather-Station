@@ -1,6 +1,6 @@
 body{background-color: lightblue; font-family: sans-serif;}
 body>div{background-color: white; padding: 5px; margin: 10px auto; width: 90%; max-width: 500px; border-radius: 10px;}
-input[type=submit]{font-weight: bold; background-color: orange; padding: 5px; margin: 10px; float: right; color: white; border-radius: 10px}
+input[type=submit]{ padding: 5px; margin: 10px;}
 body>div>h1{float: left; margin: 10px; padding: 5px;}
 body>div>h2{clear: both; margin: 10px; padding: 5px;}
 thead{background-color: #BBB;}

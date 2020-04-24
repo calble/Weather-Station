@@ -186,9 +186,6 @@ void handleRoot() {
   <body onload=\"f()\">\
     <div>\
     <h1>Weather Station</h1>\
-    <form method=\"post\" action=\"/reset\">\
-      <input type=\"submit\" value=\"Reset High/Lows\"/>\
-    </form>\
     <br/>\
     <h2>Current Weather</h2>\
     <div class=\"current\">\
@@ -210,6 +207,9 @@ void handleRoot() {
       <li><span>Record High Pressure:</span> <span>%dPa</span></li>\
     </ul>\
     %s\
+    <form id=\"reset\" method=\"post\" action=\"/reset\">\
+      <input type=\"submit\" value=\"Reset High/Lows\"/>\
+    </form>\
     </div>\
   </body>\
   </html>", t, p, tempF, currentPressure, trend, image.c_str(), tempMin, tempMax, pressureMin, pressureMax, tempFLow, tempFHigh, lowPressure, highPressure, table);
@@ -239,11 +239,6 @@ void handleJson() {
   buffer[len-2] = '\0';
   strcat(buffer, "]\n}\n");
   server.send(200, "text/json", buffer);
-}
-
-void handleNotFound() {
-  Serial.println("Handling Not Found");
-  server.send(404, "text/html", "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"UTF-8\"><title>Weather Station</title></head><body><h1>Weather Station</h1><h2>404 File Not Found!</h2></body></html>");
 }
 
 void handleReset() {
@@ -281,7 +276,7 @@ void handleStaticFiles(){
       return;    
     }
     File file = SPIFFS.open(server.uri(), "r");
-    server.streamFile(file, "");
+    server.streamFile(file, contentType);
     file.close();
   }else{
     //File does not exist
@@ -353,6 +348,7 @@ void generateTable() {
     strcat(table, strNum);
     strcat(table, "Pa</td></tr>");
   }
+  strcat(table, "</tbody></table>");
   int s = strlen(table);
   Serial.printf("Table Complete: %d\n", s);
 }
