@@ -186,7 +186,7 @@ void handleRoot() {
   <body onload=\"f()\">\
     <div>\
     <h1>Weather Station</h1>\
-    <br/>\
+    <hr/>\
     <h2>Current Weather</h2>\
     <div class=\"current\">\
       <div class=\"temp\">%.1f&deg;</div>\
@@ -200,12 +200,14 @@ void handleRoot() {
     <div id=\"ts\"></div>\
     <div class=\"half\">Temperature (%.2f-%.2f)</div>\
     <div class=\"half\">Pressure (%d-%d)</div>\
+    <h3>Record Highs and Lows</h3>\
     <ul>\
       <li><span>Record Low Temperature:</span> <span>%.2f&deg;F</span></li>\
       <li><span>Record High Temperature:</span> <span>%.2f&deg;F</span></li>\
       <li><span>Record Low Pressure:</span> <span>%dPa</span></li>\
       <li><span>Record High Pressure:</span> <span>%dPa</span></li>\
     </ul>\
+    <h3>Hourly Data</h3>\
     %s\
     <form id=\"reset\" method=\"post\" action=\"/reset\">\
       <input type=\"submit\" value=\"Reset High/Lows\"/>\
@@ -327,7 +329,9 @@ void generateTable() {
   
   Serial.println("Generating Table");
   sprintf(table, "<table><thead><th>Hour</th><th>Temperature</th><th>Pressure</th></thead><tbody>");
-  for (int i = 23; i >= 0; i--) {
+  int stopValue = (hour < 24)?(24-hour):0;
+  
+  for (int i = 23; i >= stopValue; i--) {
     //Hour column
     strcat(table, "<tr><th>");
     itoa((23 - i), strNum, 10);

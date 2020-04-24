@@ -1,8 +1,10 @@
 body{background-color: lightblue; font-family: sans-serif;}
-body>div{background-color: white; padding: 5px; margin: 10px auto; width: 90%; max-width: 500px; border-radius: 10px;}
+body>div{background-color: white; padding: 15px; margin: 10px auto; width: 90%; max-width: 500px; border-radius: 10px;}
 input[type=submit]{ padding: 5px; margin: 10px;}
-body>div>h1{float: left; margin: 10px; padding: 5px;}
-body>div>h2{clear: both; margin: 10px; padding: 5px;}
+body>div>h1{float: left; padding: 5px; margin-bottom: 0px;}
+body>div>h2,body>div>h3{clear: both; padding: 5px; margin-bottom: 0px; padding-bottom: 0px }
+ul { margin-top: 3px;}
+hr {clear: both; background-color: #DDD; height: 3px; border: none;}
 thead{background-color: #BBB;}
 tbody tr:nth-child(even){background-color: #DDD;}
 table {width: 100%; border-radius: 0px 10px 10px 0px;}
