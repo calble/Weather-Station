@@ -17,14 +17,18 @@ td,th {margin: 2px;}
 
 .current {
 	margin: 10px;
-	font-size: 75px;
+	font-size: 60px;
 	position: relative;
+}
+.temp {
+	float: left;
 }
 
 .barometer {
-	font-size: 40px;
+	font-size: 30px;
 	margin: 0px 10px;
 	display: inline-block;
+	padding-left: 15px;
 }
 
 .pressure span {
@@ -39,4 +43,29 @@ td,th {margin: 2px;}
 	top: 50%;
 	transform: translateY(-50%); 
 	margin: 0px 10px;
+}
+
+@media only screen and (max-width: 494px){
+	.barometer {
+		clear: left;
+		display: block;
+		padding-left: 0px;
+		margin: 0px;
+		width: 70%;
+		float: left;
+	}
+	.current .temp {
+		width: 70%;
+	}
+	.current img {
+		display: block;
+		top: unset;
+		bottom: 5px;
+		left: 72%;
+		max-height: 50px;
+		transform: unset;
+	}	
+	.current::after {
+		 content:""; clear:both; display: table
+	}
 }

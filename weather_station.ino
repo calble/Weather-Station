@@ -138,14 +138,17 @@ void handleRoot() {
   Serial.println("Trend Image");
   String image = trendImage();
   //24 hour max and min temps and pressure
+  int offset = (hour < 23)?(24-hour):0;
+  int count = (hour < 24)?hour:24;
+  
   Serial.println("tempMin");
-  float tempMin = cToF(minValue(temp, 24));
+  float tempMin = cToF(minValue(temp, offset, count));
   Serial.println("tempMax");
-  float tempMax = cToF(maxValue(temp, 24));
+  float tempMax = cToF(maxValue(temp, offset, count));
   Serial.println("pressure Min");
-  int  pressureMin = minValue(pressure, 24);
+  int  pressureMin = minValue(pressure, offset, count);
   Serial.println("Pressure max");
-  int pressureMax = maxValue(pressure, 24);
+  int pressureMax = maxValue(pressure, offset, count);
 
   Serial.println("Generate Table");
   generateTable();
@@ -189,7 +192,7 @@ void handleRoot() {
     <br/>\
     <h2>Current Weather</h2>\
     <div class=\"current\">\
-      %.1f&deg;/\
+      <div class=\"temp\">%.1f&deg;</div>\
       <div class=\"barometer\">\
         <div class=\"pressure\">%d<span>Pa</span></div>\
         <div class=\"trend\">%s</div>\
@@ -269,6 +272,8 @@ void handleStaticFiles(){
     }else if(server.uri().endsWith(".js")){
       contentType = "text/js";
     }else if(server.uri().endsWith(".png")){
+      contentType = "image/png";
+    }else if(server.uri().endsWith(".ico")){
       contentType = "image/png";
     }else{
       //We don't server any other type of file
@@ -416,13 +421,20 @@ char* generateArray(float arr[]){
 
   Serial.printf("Generate Array-- Smallest: %d, Range: %d\nValues: ", small, r);
   int end = 1;
+  int offset = (hour < 24)?24-hour:0;
   for(int i=0; i < 24; i++){
     char b[5];
-    int scaledNumber = (int)(((arr[i] - small) / r) * 50);
-    Serial.printf("%d,", scaledNumber);
-    sprintf(b, "%d,", scaledNumber);
-    strcat(tempArray, b);
-    end += strlen(b) + 1;
+
+    if(i < offset){
+      strcat(tempArray, "0,");
+      end += 2;
+    }else{
+      int scaledNumber = (int)(((arr[i] - small) / r) * 50);
+      Serial.printf("%d,", scaledNumber);
+      sprintf(b, "%d,", scaledNumber);
+      strcat(tempArray, b);
+      end += strlen(b) + 1;
+    }
   }
   
   strcat(tempArray, "]");
@@ -503,33 +515,33 @@ float cToF(float c){
   return (c * 9.0 / 5.0) + 32;
 }
 
-float minValue(float arr[], int s){
-  float v = arr[0];
-  for(int i=0; i < s; i++){
+float minValue(float arr[], int offset, int count){
+  float v = arr[offset];
+  for(int i=offset; i < (offset + count); i++){
     v = min(v, arr[i]);
   }
   return v;
 }
 
-float maxValue(float arr[], int s){
-  float v = arr[0];
-  for(int i=0; i < s; i++){
+float maxValue(float arr[], int offset, int count){
+  float v = arr[offset];
+  for(int i=offset; i < (offset + count); i++){
     v = max(v, arr[i]);
   }
   return v;
 }
 
-int minValue(int arr[], int s){
-  int v = arr[0];
-  for(int i=0; i < s; i++){
+int minValue(int arr[], int offset, int count){
+  int v = arr[offset];
+  for(int i=offset; i < (offset + count); i++){
     v = min(v, arr[i]);
   }
   return v;
 }
 
-int maxValue(int arr[], int s){
-  int v = arr[0];
-  for(int i=0; i < s; i++){
+int maxValue(int arr[], int offset, int count){
+  int v = arr[offset];
+  for(int i=offset; i < (offset + count); i++){
     v = max(v, arr[i]);
   }
   return v;
