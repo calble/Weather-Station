@@ -191,10 +191,9 @@ void handleRoot() {
     <div class=\"current\">\
       <div class=\"temp\">%.1f&deg;</div>\
       <div class=\"barometer\">\
-        <div class=\"pressure\">%d<span>Pa</span></div>\
+        <div class=\"pressure\">%d<span>Pa</span><img src=\"%s\"/></div>\
         <div class=\"trend\">%s</div>\
       </div>\
-      <img src=\"%s\"/>\
     </div>\
     <h2>Historic Data</h2>\
     <div id=\"ts\"></div>\
@@ -214,7 +213,7 @@ void handleRoot() {
     </form>\
     </div>\
   </body>\
-  </html>", t, p, tempF, currentPressure, trend, image.c_str(), tempMin, tempMax, pressureMin, pressureMax, tempFLow, tempFHigh, lowPressure, highPressure, table);
+  </html>", t, p, tempF, currentPressure, image.c_str(), trend,  tempMin, tempMax, pressureMin, pressureMax, tempFLow, tempFHigh, lowPressure, highPressure, table);
   free(t);
   free(p);
   free(trend);
@@ -429,7 +428,12 @@ char* generateArray(float arr[]){
       strcat(tempArray, "0,");
       end += 2;
     }else{
-      int scaledNumber = (int)(((arr[i] - small) / r) * 50);
+      int scaledNumber;
+      if(r == 0){
+        scaledNumber = 50;
+      }else{
+        scaledNumber = (int)(((arr[i] - small) / r) * 50);
+      }
       Serial.printf("%d,", scaledNumber);
       sprintf(b, "%d,", scaledNumber);
       strcat(tempArray, b);
@@ -447,8 +451,9 @@ int range(float arr[]){
 }
 
 int smallest(float arr[]){
-  int smallest = (int)arr[0];
-  for(int i=1; i < 24; i++){
+  int offset = (hour < 24)?24-hour:0;
+  int smallest = (int)arr[offset];
+  for(int i=offset+1; i < 24; i++){
     if(arr[i] < smallest){
       smallest = (int)arr[i];
     }
@@ -457,8 +462,9 @@ int smallest(float arr[]){
 }
 
 int largest(float arr[]){
-  int largest = (int)arr[0];
-  for(int i=1; i < 24; i++){
+  int offset = (hour < 24)?24-hour:0;
+  int largest = (int)arr[offset];
+  for(int i=offset + 1; i < 24; i++){
     if(arr[i] > largest){
       largest = (int)arr[i];
     }

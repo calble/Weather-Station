@@ -41,10 +41,8 @@ td,th {margin: 2px;}
 }
 
 .current img {
-	position: absolute;
-	top: 50%;
-	transform: translateY(-50%); 
-	margin: 0px 10px;
+	max-width: 60px;
+	max-height: 25px;
 }
 
 @media only screen and (max-width: 494px){
@@ -60,12 +58,7 @@ td,th {margin: 2px;}
 		width: 70%;
 	}
 	.current img {
-		display: block;
-		top: unset;
-		bottom: 5px;
-		left: 72%;
-		max-height: 50px;
-		transform: unset;
+		max-width: 40px;
 	}	
 	.current::after {
 		 content:""; clear:both; display: table
