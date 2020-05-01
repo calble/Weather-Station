@@ -359,11 +359,6 @@ void generateTable() {
 char* findTrend(){
   char* trend = (char*)malloc(sizeof(char) * 50);
   trend[0] = '\0';
-
-  if(hour < 10){
-    strcat(trend, "More data needed");
-    return trend;
-  }
   
   //high pressure
   if(currentPressure > 102268){
@@ -376,6 +371,11 @@ char* findTrend(){
     strcat(trend, "Low Pressure, ");
   }
 
+  if(hour < 10){
+    strcat(trend, "More data needed");
+    return trend;
+  }
+  
   int change = currentPressure  - (pressure[17] + pressure[18] + pressure[19]) / 3;
 
   if(change >= 600){
@@ -418,7 +418,13 @@ char* generateArray(float arr[]){
   int small = smallest(arr);
   int r = range(arr);
 
-  Serial.printf("Generate Array-- Smallest: %d, Range: %d\nValues: ", small, r);
+  Serial.printf("Generate Array-- Smallest: %d, Range: %d, Hour: %d", small, r, hour);
+  Serial.printf("Org Data: [");
+  for(int i=0; i < 24; i++){
+    Serial.printf("%f,", arr[i]);
+  }
+  Serial.printf("\nJS Values: ");
+  
   int end = 1;
   int offset = (hour < 24)?24-hour:0;
   for(int i=0; i < 24; i++){
