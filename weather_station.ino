@@ -38,9 +38,9 @@ void hourlyUpdate();
 void resetHighLow();
 void generateTable();
 char* findTrend();
-int range(float arr[]);
-int smallest(float arr[]);
-int largest(float arr[]);
+float range(float arr[]);
+float smallest(float arr[]);
+float largest(float arr[]);
 char* generateArray(float arr[]);
 char* generateArray(int arr[]);
 void flashIP();
@@ -415,8 +415,8 @@ char* generateArray(float arr[]){
   tempArray[0] = '\0';
   strcat(tempArray, "[");
 
-  int small = smallest(arr);
-  int r = range(arr);
+  float small = smallest(arr);
+  float r = range(arr);
 
   Serial.printf("Generate Array-- Smallest: %d, Range: %d, Hour: %d", small, r, hour);
   Serial.printf("Org Data: [");
@@ -452,27 +452,27 @@ char* generateArray(float arr[]){
   return tempArray;
 }
 
-int range(float arr[]){
+float range(float arr[]){
   return abs(largest(arr) - smallest(arr));
 }
 
-int smallest(float arr[]){
+float smallest(float arr[]){
   int offset = (hour < 24)?24-hour:0;
-  int smallest = (int)arr[offset];
+  float smallest = (int)arr[offset];
   for(int i=offset+1; i < 24; i++){
     if(arr[i] < smallest){
-      smallest = (int)arr[i];
+      smallest = arr[i];
     }
   }
   return smallest;
 }
 
-int largest(float arr[]){
+float largest(float arr[]){
   int offset = (hour < 24)?24-hour:0;
-  int largest = (int)arr[offset];
+  float largest = (int)arr[offset];
   for(int i=offset + 1; i < 24; i++){
     if(arr[i] > largest){
-      largest = (int)arr[i];
+      largest = arr[i];
     }
   }
   return largest;
