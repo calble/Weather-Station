@@ -64,3 +64,8 @@ td,th {margin: 2px;}
 		 content:""; clear:both; display: table
 	}
 }
+
+table tbody td, table tbody th{
+  text-align: right;
+  padding-right: 5px;
+}
