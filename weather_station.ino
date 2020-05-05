@@ -108,7 +108,6 @@ void setup() {
   
   resetHighLow();
   flashIP();
-
 }
 
 void loop() {
@@ -145,11 +144,14 @@ void handleRoot() {
   float tempMin = cToF(minValue(temp, offset, count));
   Serial.println("tempMax");
   float tempMax = cToF(maxValue(temp, offset, count));
+  float tempRange = tempMax - tempMin;;
+  
   Serial.println("pressure Min");
   int  pressureMin = minValue(pressure, offset, count);
   Serial.println("Pressure max");
   int pressureMax = maxValue(pressure, offset, count);
-
+  int pressureRange = pressureMax - pressureMin;
+  
   Serial.println("Generate Table");
   generateTable();
 //  table[0] = '\0';
@@ -197,8 +199,8 @@ void handleRoot() {
     </div>\
     <h2>Historic Data</h2>\
     <div id=\"ts\"></div>\
-    <div class=\"half\">Temperature (%.2f-%.2f)</div>\
-    <div class=\"half\">Pressure (%d-%d)</div>\
+    <div class=\"half\">Temperature (%.2f-%.2f) Range: %.2f</div>\
+    <div class=\"half\">Pressure (%d-%d) Range: %d</div>\
     <h3>Record Highs and Lows</h3>\
     <ul>\
       <li><span>Record Low Temperature:</span> <span>%.2f&deg;F</span></li>\
@@ -213,7 +215,7 @@ void handleRoot() {
     </form>\
     </div>\
   </body>\
-  </html>", t, p, tempF, currentPressure, image.c_str(), trend,  tempMin, tempMax, pressureMin, pressureMax, tempFLow, tempFHigh, lowPressure, highPressure, table);
+  </html>", t, p, tempF, currentPressure, image.c_str(), trend,  tempMin, tempMax, tempRange, pressureMin, pressureMax, pressureRange, tempFLow, tempFHigh, lowPressure, highPressure, table);
   free(t);
   free(p);
   free(trend);
@@ -418,7 +420,7 @@ char* generateArray(float arr[]){
   float small = smallest(arr);
   float r = range(arr);
 
-  Serial.printf("Generate Array-- Smallest: %d, Range: %d, Hour: %d", small, r, hour);
+  Serial.printf("Generate Array-- Smallest: %f, Range: %f, Hour: %d", small, r, hour);
   Serial.printf("Org Data: [");
   for(int i=0; i < 24; i++){
     Serial.printf("%f,", arr[i]);
@@ -453,12 +455,13 @@ char* generateArray(float arr[]){
 }
 
 float range(float arr[]){
-  return abs(largest(arr) - smallest(arr));
+  float difference = largest(arr) - smallest(arr);
+  return (difference < 0)? difference * -1:difference;
 }
 
 float smallest(float arr[]){
   int offset = (hour < 24)?24-hour:0;
-  float smallest = (int)arr[offset];
+  float smallest = arr[offset];
   for(int i=offset+1; i < 24; i++){
     if(arr[i] < smallest){
       smallest = arr[i];
@@ -469,7 +472,7 @@ float smallest(float arr[]){
 
 float largest(float arr[]){
   int offset = (hour < 24)?24-hour:0;
-  float largest = (int)arr[offset];
+  float largest = arr[offset];
   for(int i=offset + 1; i < 24; i++){
     if(arr[i] > largest){
       largest = arr[i];
