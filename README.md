@@ -1,9 +1,11 @@
 # Weather Station
-Weather Station is powered by an ESP8266 and a BMP180.
-The BMP180 SCL is connected to D1 and SDA is connected to D2.
+Weather Station is powered by an ESP8266, a BME280, and a DS3231 RTC with a AT25C32 CHIP.
+The BME280 and the RTC are connected as follows:
+	-- SCL is connected to D1 
+	-- SDA is connected to D2.
 
 Upon powerup the board will flash the flash both leds to indicated the last octet of its IP address.
-Upon failure to connect to the BMP180, led2 will flash in an infinte loop.
+Upon failure to connect to the BME280, led2 will flash in an infinte loop.
 Upon completed boot LED1 will be on and LED2 will be off.
 
 # URL Enpoints
