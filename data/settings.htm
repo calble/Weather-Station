@@ -1,0 +1,30 @@
+ <!DOCTYPE html>
+  <html lang="en">
+  <head>
+    <meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather Station Settings</title>
+	<link rel="stylesheet" href="/main.css"/>
+  </head>
+  <body>
+	<div>
+		<h1>Weather Station Settings</h1>
+		<hr/>
+		<form method="post" action="/save_settings">
+			<label for="time">Time:</label>
+			<input type="time" id="time" name="time"/>
+			
+			<label for="date">Date:</label>
+			<input type="date" id="date" name="date"/>
+			
+			<label for="remote_host">Remote Host:</label>
+			<input type="text" id="remote_host" name="remote_host" maxlength="31"/>
+			
+			<label for="remote_path">Remote Path:</label>
+			<input type="text" id="remote_path" name="remote_path" maxlength="31"/>
+			
+			<input type="submit" name="action" value="Save Settings"/>
+		</form>
+	</div>
+  </body>
+</html>

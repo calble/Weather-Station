@@ -16,7 +16,12 @@ td,th {margin: 2px;}
 .down {background-color: red}
 .even {background-color: yellow}
 .half {width: 50%; float: left; text-align: center; font-size: 12px; margin-bottom: 8px}
-
+.small {margin-left: 5px; font-size: 11px;}
+.i {display: inline-block;}
+form label{
+	display: block;
+	margin-top: 20px;
+}
 .current {
 	margin: 10px;
 	font-size: 60px;

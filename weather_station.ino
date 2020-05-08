@@ -1,11 +1,19 @@
 #include<ESP8266WiFi.h>
-#include<Adafruit_BMP085.h>
+#include <Adafruit_Sensor.h>
+#include <Adafruit_BME280.h>
 #include<Wire.h>
 #include <ESP8266WebServer.h>
 #include <ESP8266mDNS.h>
 #include <TaskScheduler.h>
 #include <stdlib.h>
 #include <FS.h>
+#include <RtcDS3231.h>
+#include <EepromAT24C32.h>
+
+
+
+#define ADDR_REMOTE_HOST 0
+#define ADDR_REMOTE_PATH 32
 
 const short int BUILTIN_LED1 = 2; //GPIO2
 const short int BUILTIN_LED2 = 16;//GPIO16
@@ -13,26 +21,35 @@ const short int BUILTIN_LED2 = 16;//GPIO16
 #define ALTITUDE 198 //Meter above sea level of station
 
 ESP8266WebServer server(80);
-Adafruit_BMP085 bmp;
+Adafruit_BME280 bmp;
 
 char buffer[4000];
 char table[2000];
 float temp[24];
+float humidity[24];
 int pressure[24];
 
 float currentTemp = 0;
 int currentPressure = 0;
+float currentHumidity = 0;
+
 int hour = 0;
+
 float highTemp = 0;
 float lowTemp = 0;
+
 int highPressure = 0;
 int lowPressure = 0;
+
+float lowHumidity = 0;
+float highHumidity = 0;
 
 void handleRoot();
 void handleStaticFiles();
 void handleJson();
 void handleNotFound();
 void handleReset();
+void handleSaveSettings();
 void sensorUpdate();
 void hourlyUpdate();
 void resetHighLow();
@@ -52,7 +69,9 @@ float maxValue(float[], int);
 int minValue(int[], int);
 int maxValue(int[], int);
 
-  
+RtcDS3231<TwoWire> Rtc(Wire);
+EepromAt24c32<TwoWire> RtcEeprom(Wire);
+
 
 Task sensorTask(10000, TASK_FOREVER, &sensorUpdate);
 Task hourlyTask(1000 * 60 * 60, TASK_FOREVER, &hourlyUpdate);
@@ -79,8 +98,8 @@ void setup() {
   MDNS.addService("weather","tcp",80);
   Wire.begin();
   delay(30);
-  if (!bmp.begin()) {
-    Serial.println("BMP180 failed to connect.");
+  if (!bmp.begin(0x76, &Wire)) {
+    Serial.println("BME280 failed to connect.");
      while(true){
       digitalWrite(BUILTIN_LED2, LOW);  
       delay(500);
@@ -88,11 +107,31 @@ void setup() {
       delay(500);
     }   
   }
+
+  //Setup RTC
+  Rtc.Begin();
+  if(!Rtc.IsDateTimeValid()){
+    Serial.println("RTC IsDateTimeValid False!");
+  }
+  //Setup EEPROM
+  RtcEeprom.Begin();
+ 
+  
+  byte letters[5] = {65,66,67,68,69};
+//  eeprom->writeBytes(0, 5, letters);
+  byte out[5];
+  RtcEeprom.SetMemory(0, letters, 5);
+  delay(2000);
+  RtcEeprom.GetMemory(0, out, 5);
+  for(int i=0; i < 5; i++){
+    Serial.printf("OUT: %c\n", (char)out[i]);
+  }
   
   server.on("/", HTTP_GET, handleRoot);
   server.on("/json", HTTP_GET, handleJson);
   server.onNotFound(handleStaticFiles);
   server.on("/reset", HTTP_POST, handleReset);
+  server.on("/save_settings", HTTP_POST, handleSaveSettings);
 //  server.on("/main.css", HTTP_GET, handleMainCss);
 //  server.on("/graph.js", HTTP_GET, handleGraphJs);
 //  
@@ -190,6 +229,7 @@ void handleRoot() {
     <h1>Weather Station</h1>\
     <hr/>\
     <h2>Current Weather</h2>\
+    <div class=\"small\">As of %d/%d/%d at %d:%02d</div>\
     <div class=\"current\">\
       <div class=\"temp\">%.1f&deg;</div>\
       <div class=\"barometer\">\
@@ -210,12 +250,21 @@ void handleRoot() {
     </ul>\
     <h3>Hourly Data</h3>\
     %s\
-    <form id=\"reset\" method=\"post\" action=\"/reset\">\
+    <form id=\"reset\" class=\"i\" method=\"post\" action=\"/reset\">\
       <input type=\"submit\" value=\"Reset High/Lows\"/>\
+    </form>\
+    <form class=\"i\" method=\"get\" action=\"/settings.htm\">\
+      <input type=\"submit\" value=\"Settings\"/>\
     </form>\
     </div>\
   </body>\
-  </html>", t, p, tempF, currentPressure, image.c_str(), trend,  tempMin, tempMax, tempRange, pressureMin, pressureMax, pressureRange, tempFLow, tempFHigh, lowPressure, highPressure, table);
+  </html>", t, p, 
+  Rtc.GetDateTime().Month(),
+  Rtc.GetDateTime().Day(),
+  Rtc.GetDateTime().Year(),
+  Rtc.GetDateTime().Hour(),
+  Rtc.GetDateTime().Minute(),
+  tempF, currentPressure, image.c_str(), trend,  tempMin, tempMax, tempRange, pressureMin, pressureMax, pressureRange, tempFLow, tempFHigh, lowPressure, highPressure, table);
   free(t);
   free(p);
   free(trend);
@@ -227,15 +276,15 @@ void handleJson() {
   Serial.println("Handling JSON");
   //  float pressure = bmp.readPressure();
   //  float temp = bmp.readTemperature();
-  float tempF = (currentTemp * 9.0 / 5.0) + 32;
-  float tempFLow = (lowTemp * 9.0 / 5.0) + 32;
-  float tempFHigh = (highTemp * 9.0 / 5.0) + 32;
-  sprintf(buffer, "{\"station\":\"Ambrosse\",\n\"temperature_f\":%.2f,\n \"temperature_c\":%.2f,\n \"pressure_pa\":%d,\n \"high_temperature_f\":%.2f, \n \"high_temperature_c\":%.2f,\n \"low_temperature_f\":%.2f,\n \"high_tempurature_c\":%.2f,\n \"low_pressure\":%d,\n \"high_pressure\": %d, \"time_series\":[\n",
-          tempF, currentTemp, currentPressure, tempFHigh, highTemp, tempFLow, lowTemp, lowPressure, highPressure);
+  float tempF = cToF(currentTemp);
+  float tempFLow = cToF(lowTemp * 9.0 / 5.0);
+  float tempFHigh = cToF(highTemp * 9.0 / 5.0);
+  sprintf(buffer, "{\"station\":\"Ambrosse\",\n\"temperature_f\":%.2f,\n \"temperature_c\":%.2f,\n\"humidity\":%.2f,\n \"pressure_pa\":%d,\n \"high_temperature_f\":%.2f, \n \"high_temperature_c\":%.2f,\n \"low_temperature_f\":%.2f,\n \"high_tempurature_c\":%.2f,\n \"low_pressure\":%d,\n \"high_pressure\": %d,\n\"low_humidity\":%.2f,\n\"high_humidity\":%.2f,\n\"time_series\":[\n",
+          tempF, currentTemp, currentHumidity, currentPressure, tempFHigh, highTemp, tempFLow, lowTemp, lowPressure, highPressure, lowHumidity, highHumidity);
 
   for(int i=23; i >= 0; i--){
     char c[200];
-    sprintf(c, "{\"hour\":%d,\"temperature_c\":%.2f,\"pressure\":%d},\n", (23 - 1), temp[i], pressure[i]);
+    sprintf(c, "{\"hour\":%d,\"temperature_c\":%.2f,\"pressure\":%d, \"humidity\":%.2f},\n", (23 - 1), temp[i], pressure[i], humidity[i]);
     strcat(buffer, c);
   }
   int len = strlen(buffer);
@@ -268,7 +317,7 @@ void handleStaticFiles(){
     }else if(server.uri().endsWith(".css")){
       contentType = "text/css";
     }else if(server.uri().endsWith(".js")){
-      contentType = "text/js";
+      contentType = "text/javascript";
     }else if(server.uri().endsWith(".png")){
       contentType = "image/png";
     }else if(server.uri().endsWith(".ico")){
@@ -287,16 +336,52 @@ void handleStaticFiles(){
   }
 }
 
+void handleSaveSettings(){
+  if(server.hasArg("time") && server.hasArg("date") && server.hasArg("remote_host") && server.hasArg("remote_path")){
+    String t = server.arg("time");
+    String d = server.arg("date");
+
+    int year = atoi(d.substring(0,4).c_str());
+    int month = atoi(d.substring(5,7).c_str());
+    int day = atoi(d.substring(8,10).c_str());
+
+    int hour = atoi(t.substring(0,2).c_str());
+    int minute = atoi(t.substring(3,5).c_str());
+
+    RtcDateTime date(year, month, day, hour, minute, 0);
+    Rtc.SetDateTime(date);
+    
+    //Save the remote host
+    if(server.arg("remote_host").length() < 31){
+      RtcEeprom.SetMemory(ADDR_REMOTE_HOST, (uint8_t*)server.arg("remote_host").length(),1);
+      RtcEeprom.SetMemory(ADDR_REMOTE_HOST+1, (uint8_t*)server.arg("remote_host").c_str(), server.arg("remote_host").length());
+    }
+    //Save the remote path
+    if(server.arg("remote_path").length() < 31){
+      RtcEeprom.SetMemory(ADDR_REMOTE_PATH, (uint8_t*)server.arg("remote_path").length(),1);
+      RtcEeprom.SetMemory(ADDR_REMOTE_PATH+1, (uint8_t*)server.arg("remote_path").c_str(), server.arg("remote_path").length());
+    }
+
+    File file = SPIFFS.open("/saved.htm", "r");
+    server.streamFile(file, "text/html");
+  }else{
+    server.send(400, "text/html", "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"UTF-8\"><title>Weather Station Error</title></head><body><h1>Weather Station Error</h1><h2>400 Bad Request!</h2><p>Settings not saved!</p></body></html>");
+  }
+}
+
 void resetHighLow() {
-  lowPressure = highPressure = bmp.readSealevelPressure(ALTITUDE);
+  lowPressure = highPressure = pressureAtSealevel();
   lowTemp = highTemp = bmp.readTemperature();
+  lowHumidity = highHumidity = bmp.readHumidity();
 }
 
 void sensorUpdate() {
-  Serial.println("Sensor Update");
   currentTemp = bmp.readTemperature();
-  currentPressure = bmp.readSealevelPressure(ALTITUDE);
+  currentPressure = pressureAtSealevel();
+  currentHumidity = bmp.readHumidity();
 
+  Serial.printf("Sensor Update: %.2fF, %.2f%%, %dPa\n", currentTemp, currentHumidity, currentPressure);
+  
   if (currentTemp > highTemp) {
     highTemp = currentTemp;
   }
@@ -309,6 +394,13 @@ void sensorUpdate() {
   if (currentPressure < lowPressure) {
     lowPressure = currentPressure;
   }
+
+  if(currentHumidity < lowHumidity){
+    lowHumidity = currentHumidity;
+  }
+    if(currentHumidity > highHumidity){
+    highHumidity = currentHumidity;
+  }
 }
 
 void hourlyUpdate() {
@@ -317,10 +409,12 @@ void hourlyUpdate() {
   for(int i=0; i < 23; i++){
     temp[i] = temp[i+1];
     pressure[i] = pressure[i+1];
+    humidity[i] = humidity[i+1];
   }
   
   temp[23] = currentTemp;
   pressure[23] = currentPressure;
+  humidity[23] = currentHumidity;
   hour++;
 }
 
@@ -560,4 +654,9 @@ int maxValue(int arr[], int offset, int count){
     v = max(v, arr[i]);
   }
   return v;
+}
+
+int pressureAtSealevel(){
+  int pressure = bmp.readPressure();
+  return pressure / pow(1-ALTITUDE/44330.0, 5.255);
 }
