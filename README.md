@@ -8,14 +8,19 @@ Upon powerup the board will flash the flash both leds to indicated the last octe
 Upon failure to connect to the BME280, led2 will flash in an infinte loop.
 Upon completed boot LED1 will be on and LED2 will be off.
 
-# URL Enpoints
+## Resetting EEPROM
+EEPROM is reset by holding GPIO 3 LOW (Ground).  A message will be printed to the serial monitor about 
+resetting progress.  During reset LED1 will be off and LED2 will flash at each of the 256 page
+clears. This pattern looks like the LED is mostly on, with short blinks off. Upon completion LED1 will be off and LED2 will flash on and off at a rate of 2Hz.
+
+## URL Enpoints
 * / --> GET The main html page for the application
 * /reset --> POST to this endpoint to reset the high/low pressure and temperature readings.
 * /json --> GET the JSON representation of what is on /.
 * /main.css --> GET the CSS for the / page.
 * /graph.js --> GET the javascript code for rendering the graph on the root page.
 
-# File System
+## File System
 The jar file in the resources directory must be put in the propert Arduino directory to upload
 the files.
 

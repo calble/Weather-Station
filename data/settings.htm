@@ -4,26 +4,60 @@
     <meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Weather Station Settings</title>
-	<link rel="stylesheet" href="/main.css"/>
+	<link rel="stylesheet" href="main.css"/>
+	<script>
+	var mode = "";
+	window.onload = function(){
+		var request = new XMLHttpRequest();
+		request.responseType = "json";
+		request.addEventListener("load", function(){
+			console.log(request.response);
+			document.getElementById("station").value = request.response.station;
+			document.getElementById("remote").value = request.response.remote;
+			
+			document.getElementById("time").value = request.response.date.substring(11);
+			document.getElementById("date").value = request.response.date.substring(0,10);
+			
+			document.getElementById("form").style.display = "block";
+			document.getElementById("loading").style.display = "none";
+		});
+		request.addEventListener("error", function(){
+			alert("Failed to get settings");
+		});
+		request.open("POST", "get_settings");
+		request.send();
+		
+		document.getElementById("form").onsubmit = function(){
+			if(mode == "delete"){
+				var response = confirm("Are you sure you want to reset historical data?");
+				return response;
+			}
+		}
+	};
+	</script>
   </head>
   <body>
 	<div>
 		<h1>Weather Station Settings</h1>
 		<hr/>
-		<form method="post" action="/save_settings">
+		<img id="loading" src="loading.gif" alt="loading..."/>
+		<form id="form" method="post" action="/save_settings" style="display: none">
+			<label for="station">Station Name:</label>
+			<input type="text" id="station" name="station" maxlength="31"/>
+			
 			<label for="time">Time:</label>
 			<input type="time" id="time" name="time"/>
 			
 			<label for="date">Date:</label>
 			<input type="date" id="date" name="date"/>
 			
-			<label for="remote_host">Remote Host:</label>
-			<input type="text" id="remote_host" name="remote_host" maxlength="31"/>
+			<label for="remote">Remote Server [host:port/path]:</label>
+			<input type="text" id="remote" name="remote" maxlength="31"/>
 			
-			<label for="remote_path">Remote Path:</label>
-			<input type="text" id="remote_path" name="remote_path" maxlength="31"/>
-			
-			<input type="submit" name="action" value="Save Settings"/>
+			<div>
+				<input type="submit" name="action" value="Save Settings"/>
+				<input id="reset" type="submit" name="action" onclick="mode='delete';" value="Reset Historical Data"/>
+			</div>
 		</form>
 	</div>
   </body>
