@@ -128,6 +128,14 @@ function ajax(){
 		document.getElementById("barometer_range").innerHTML = request.response.current.pressure;
 		document.getElementById("trend").innerHTML = request.response.current.trend;
 		
+		if(request.response.current.frost === true){
+			document.querySelector("body").classList.add("frost");
+			document.getElementById("frost").style.display = "block";
+		}else{
+			document.querySelector("body").classList.remove("frost");
+			document.getElementById("frost").style.display = "none";
+		}
+		
 		var img;
 		switch(request.response.current.trend){
 			case "rising":
