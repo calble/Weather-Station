@@ -9,4 +9,7 @@ void bytesToLong(byte bytes[], long* n);
 void bytesToInt(byte bytes[], int* n);
 void bytesToFloat(byte bytes[], float* n);
 
+void eeprom_test();
+void eeprom_rw_test(EepromAt24c32<TwoWire> w);
+
 #endif

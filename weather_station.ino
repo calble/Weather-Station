@@ -1,7 +1,7 @@
-#include<ESP8266WiFi.h>
+#include <ESP8266WiFi.h>
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BME280.h>
-#include<Wire.h>
+#include <Wire.h>
 #include <ESP8266WebServer.h>
 #include <ESP8266mDNS.h>
 #include <TaskScheduler.h>
@@ -12,88 +12,30 @@
 #include <ctype.h>
 
 #include "eeprom.h"
-
-
-#define ADDR_STATION        0   //One Page
-#define ADDR_REMOTE         32  //One Page
-#define ADDR_TIME           64  //Eight Pages
-#define ADDR_TEMP           320 //Three Pages
-#define ADDR_HUMIDITY       448 //Three Pages
-#define ADDR_PRESSURE       576 //Three Pages
-#define ADDR_HIGH_TEMP      704
-#define ADDR_LOW_TEMP       708
-#define ADDR_HIGH_PRESSURE  712
-#define ADDR_LOW_PRESSURE   716
-#define ADDR_HIGH_HUMIDITY  720
-#define ADDR_LOW_HUMIDITY   724
-
-
-const short int BUILTIN_LED1 = 2; //GPIO2
-const short int BUILTIN_LED2 = 16;//GPIO16
-const short int CLEAR_MEMORY = 3;
-
-#define ALTITUDE 198 //Meter above sea level of station
+#include "wmath.h"
+#include "history.h"
+#include "settings.h"
 
 ESP8266WebServer server(80);
 Adafruit_BME280 bmp;
 
-char buffer[4000];
-char table[2000];
-float temp[24];
-float humidity[24];
-int pressure[24];
-RtcDateTime dates[24];
-char remote[32];
-char station[32];
-
-float currentTemp = 0;
-int currentPressure = 0;
-float currentHumidity = 0;
-
-int hour = 0;
-
-float highTemp = 0;
-float lowTemp = 0;
-
-int highPressure = 0;
-int lowPressure = 0;
-
-float lowHumidity = 0;
-float highHumidity = 0;
 
 void handleRoot();
 void handleStaticFiles();
 void handleJson();
 void handleNotFound();
-void handleReset();
 void handleSaveSettings();
 void handleGetSettings();
 void sensorUpdate();
 void hourlyUpdate();
-void resetHighLow();
 void generateTable();
 char* findTrend();
-float range(float arr[]);
-float smallest(float arr[]);
-float largest(float arr[]);
 char* generateArray(float arr[]);
 char* generateArray(int arr[]);
 void flashIP();
 char* findPressureLevel();
 char * findPressureTrend();
-void restore();
-
 String trendImage();
-float cToF(float);
-float minValue(float[], int);
-float maxValue(float[], int);
-int minValue(int[], int);
-int maxValue(int[], int);
-void clearEEPROM();
-
-RtcDS3231<TwoWire> Rtc(Wire);
-EepromAt24c32<TwoWire> RtcEeprom(Wire);
-
 
 Task sensorTask(10000, TASK_FOREVER, &sensorUpdate);
 Task hourlyTask(1000 * 60 * 60, TASK_FOREVER, &hourlyUpdate);
@@ -104,7 +46,7 @@ void setup() {
   pinMode(BUILTIN_LED1, OUTPUT); // Initialize the BUILTIN_LED1 pin as an output
   pinMode(BUILTIN_LED2, OUTPUT); // Initialize the BUILTIN_LED2 pin as an output
   pinMode(CLEAR_MEMORY, INPUT);
-  
+
   WiFi.mode(WIFI_STA);
   WiFi.begin("NohaNet-C", "B3B6A7AF71D34DF28A88F25BFD");
 
@@ -140,6 +82,11 @@ void setup() {
   //Setup EEPROM
   RtcEeprom.Begin();
 
+  //  eeprom_test();
+//  resetHighLow();
+//  debug();
+//  eeprom_rw_test(RtcEeprom);
+  
   //Clear EEPROM if the pin is high 3 times in a row
   if(digitalRead(CLEAR_MEMORY) == LOW){
     delay(50);
@@ -157,7 +104,6 @@ void setup() {
   server.on("/", HTTP_GET, handleRoot);
   server.on("/json", HTTP_GET, handleJson);
   server.onNotFound(handleStaticFiles);
-  server.on("/reset", HTTP_POST, handleReset);
   server.on("/save_settings", HTTP_POST, handleSaveSettings);
   server.on("/get_settings",HTTP_POST, handleGetSettings);
   
@@ -189,7 +135,9 @@ void loop() {
   //
   //  Serial.print("Temperature: ");
   //  Serial.println(temp);
-
+  if(digitalRead(CLEAR_MEMORY) == LOW){
+    debug();
+  }
 }
 
 void handleRoot() {
@@ -278,9 +226,6 @@ void handleRoot() {
     </ul>\
     <h3>Hourly Data</h3>\
     %s\
-    <form id=\"reset\" class=\"i\" method=\"post\" action=\"/reset\">\
-      <input type=\"submit\" value=\"Reset High/Lows\"/>\
-    </form>\
     <form class=\"i\" method=\"get\" action=\"/settings.htm\">\
       <input type=\"submit\" value=\"Settings\"/>\
     </form>\
@@ -319,13 +264,16 @@ void handleJson() {
     if(dates[i] == NULL){
       continue;
     }
+    RtcDateTime tmp;
+    tmp.InitWithEpoch64Time(dates[i]);
+    
     sprintf(c, "{\"date\":\"%04d-%02d-%02d %02d:%02d\",\"temperature_c\":%.2f,\"pressure\":%d, \"humidity\":%.2f},\n",
-                dates[i].Year(),
-                dates[i].Month(),
-                dates[i].Day(),
+                tmp.Year(),
+                tmp.Month(),
+                tmp.Day(),
                 
-                dates[i].Hour(),
-                dates[i].Minute(),
+                tmp.Hour(),
+                tmp.Minute(),
                 temp[i],
                 pressure[i],
                 humidity[i]);
@@ -335,22 +283,6 @@ void handleJson() {
   buffer[len-2] = '\0';
   strcat(buffer, "]\n}\n");
   server.send(200, "text/json", buffer);
-}
-
-void handleReset() {
-  resetHighLow();
-  server.send(200, "text/html", "<!DOCTYPE html>\
-  <html lang=\"en\">\
-  <head>\
-    <meta charset=\"UTF-8\">\
-    <title>Weather Station Reset</title>\
-  </head>\
-  <body>\
-    <h1>Weather Station</h1>\
-    <p>Reset of low and high measurements is complete</p>\
-    <a href=\"/\">Return Home</a>\
-  </body>\
-  </html>");
 }
 
 void handleStaticFiles(){
@@ -366,6 +298,8 @@ void handleStaticFiles(){
       contentType = "image/png";
     }else if(server.uri().endsWith(".ico")){
       contentType = "image/png";
+    }else if(server.uri().endsWith(".gif")){
+      contentType = "image/gif";
     }else{
       //We don't server any other type of file
       server.send(401, "text/html", "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"UTF-8\"><title>Weather Station</title></head><body><h1>Weather Station</h1><h2>401 Unauthorized!</h2></body></html>");
@@ -430,7 +364,7 @@ void handleSaveSettings(){
     
     File file = SPIFFS.open("/saved.htm", "r");
     server.streamFile(file, "text/html");
-  }else if(server.hasArg("Reset Historical Data")){
+  }else if(server.hasArg("action") && server.arg("action") == "Reset Historical Data"){
     resetHighLow();
     File file = SPIFFS.open("/reset.htm", "r");
     server.streamFile(file, "text/html");
@@ -439,38 +373,7 @@ void handleSaveSettings(){
   }
 }
 
-void resetHighLow() {
-  //Set min and max measurements to sane defaults
-  byte buffer[4];
-  
-  float tempMax = 10000;
-  float tempMin = -10000;
-  float humidityMax = 200;
-  float humidityMin = -200;
-  int pressureMax = 2000000;
-  int pressureMin = -2000000;
 
-  floatToBytes(tempMin, buffer);
-  RtcEeprom.SetMemory(ADDR_HIGH_TEMP, buffer, 4);
-  delay(10);
-  floatToBytes(tempMax, buffer);
-  RtcEeprom.SetMemory(ADDR_LOW_TEMP, buffer, 4);
-  delay(10);
-  
-  intToBytes(pressureMin, buffer);
-  RtcEeprom.SetMemory(ADDR_HIGH_PRESSURE, buffer, 4);
-  delay(10);
-  intToBytes(pressureMax, buffer);
-  RtcEeprom.SetMemory(ADDR_LOW_PRESSURE, buffer, 4);
-  delay(10);
-  
-  floatToBytes(humidityMin, buffer);
-  RtcEeprom.SetMemory(ADDR_HIGH_HUMIDITY, buffer, 4);
-  delay(10);
-  floatToBytes(humidityMax, buffer);
-  RtcEeprom.SetMemory(ADDR_LOW_HUMIDITY, buffer, 4);
-  delay(10);
-}
 
 void sensorUpdate() {
   currentTemp = bmp.readTemperature();
@@ -535,6 +438,8 @@ void hourlyUpdate() {
   humidity[23] = currentHumidity;
   dates[23] = Rtc.GetDateTime();
   hour++;
+
+  save();
 }
 
 void generateTable() {
@@ -676,8 +581,8 @@ char* generateArray(float arr[]){
   tempArray[0] = '\0';
   strcat(tempArray, "[");
 
-  float small = smallest(arr);
-  float r = range(arr);
+  float small = smallest(arr, hour);
+  float r = range(arr, hour);
 
   Serial.printf("Generate Array-- Smallest: %f, Range: %f, Hour: %d", small, r, hour);
   Serial.printf("Org Data: [");
@@ -711,33 +616,6 @@ char* generateArray(float arr[]){
   strcat(tempArray, "]");
   Serial.printf("\nComplete: %s\n\n", tempArray);
   return tempArray;
-}
-
-float range(float arr[]){
-  float difference = largest(arr) - smallest(arr);
-  return (difference < 0)? difference * -1:difference;
-}
-
-float smallest(float arr[]){
-  int offset = (hour < 24)?24-hour:0;
-  float smallest = arr[offset];
-  for(int i=offset+1; i < 24; i++){
-    if(arr[i] < smallest){
-      smallest = arr[i];
-    }
-  }
-  return smallest;
-}
-
-float largest(float arr[]){
-  int offset = (hour < 24)?24-hour:0;
-  float largest = arr[offset];
-  for(int i=offset + 1; i < 24; i++){
-    if(arr[i] > largest){
-      largest = arr[i];
-    }
-  }
-  return largest;
 }
 
 void flashIP(){
@@ -785,42 +663,6 @@ String trendImage(){
   }
 }
 
-float cToF(float c){
-  return (c * 9.0 / 5.0) + 32;
-}
-
-float minValue(float arr[], int offset, int count){
-  float v = arr[offset];
-  for(int i=offset; i < (offset + count); i++){
-    v = min(v, arr[i]);
-  }
-  return v;
-}
-
-float maxValue(float arr[], int offset, int count){
-  float v = arr[offset];
-  for(int i=offset; i < (offset + count); i++){
-    v = max(v, arr[i]);
-  }
-  return v;
-}
-
-int minValue(int arr[], int offset, int count){
-  int v = arr[offset];
-  for(int i=offset; i < (offset + count); i++){
-    v = min(v, arr[i]);
-  }
-  return v;
-}
-
-int maxValue(int arr[], int offset, int count){
-  int v = arr[offset];
-  for(int i=offset; i < (offset + count); i++){
-    v = max(v, arr[i]);
-  }
-  return v;
-}
-
 int pressureAtSealevel(){
   int pressure = bmp.readPressure();
   return pressure / pow(1-ALTITUDE/44330.0, 5.255);
@@ -863,64 +705,4 @@ void handleGetSettings(){
   (char*)remote);
   
   server.send(200, "text/json", buffer);
-}
-
-void clearEEPROM(){
-  Serial.println("Clearing EEPROM");
-  byte clear[32];
-  for(int i=0; i < 32; i++){
-    clear[i] = 0;
-  }
-
-  digitalWrite(BUILTIN_LED1, HIGH);
-  for(int i=0; i < 256; i++){
-    Serial.printf("Clearing page: %d\n", i);
-    digitalWrite(BUILTIN_LED2, LOW);
-    RtcEeprom.SetMemory(i * 32, clear, 32);
-    delay(50);
-    digitalWrite(BUILTIN_LED2, HIGH);
-    delay(50);
-  }
-  
-  //Put sane defaults in for the highs and lows
-  resetHighLow();
-  
-  Serial.printf("EEPROM Cleared! Set pin %d to HIGH and restart.", CLEAR_MEMORY);
-  //infinite loop to signal memory is cleared
-  while(true){
-     delay(500);
-     digitalWrite(BUILTIN_LED2, HIGH);
-     delay(500);
-     digitalWrite(BUILTIN_LED2, LOW);
-  }
-}
-
-void restore(){
-  char c[32];
-  byte b[4];
-
-  RtcEeprom.GetMemory(ADDR_HIGH_TEMP, b, 4);
-  bytesToFloat(b, &highTemp);
-  RtcEeprom.GetMemory(ADDR_LOW_TEMP, b, 4);
-  bytesToFloat(b, &lowTemp);
-
-  RtcEeprom.GetMemory(ADDR_HIGH_HUMIDITY, b, 4);
-  bytesToFloat(b, &highHumidity);
-  RtcEeprom.GetMemory(ADDR_LOW_HUMIDITY, b, 4);
-  bytesToFloat(b, &lowHumidity);
-
-  RtcEeprom.GetMemory(ADDR_HIGH_PRESSURE, b, 4);
-  bytesToInt(b, &highPressure);
-  RtcEeprom.GetMemory(ADDR_LOW_PRESSURE, b, 4);
-  bytesToInt(b, &lowPressure);
-
-  RtcEeprom.GetMemory(ADDR_STATION, (uint8_t*)station, 31);
-  station[31] = '\0';
-  RtcEeprom.GetMemory(ADDR_REMOTE, (uint8_t*)remote, 31);
-  station[32] = '\0';
-//  
-//  float temp[24];
-//  float humidity[24];
-//  int pressure[24];
-//  RtcDateTime dates[24];
 }
