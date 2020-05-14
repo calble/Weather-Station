@@ -10,4 +10,5 @@ float range(float arr[], int hour);
 float smallest(float arr[], int hour);
 float largest(float arr[], int hour);
 
+void replaceStr(char* str, char org, char replace);
 #endif

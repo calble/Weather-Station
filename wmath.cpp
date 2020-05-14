@@ -64,3 +64,12 @@ float largest(float arr[], int hour){
   }
   return largest;
 }
+
+void replaceStr(char* str, char org, char replace){
+  int len = strlen(str);
+  for(int i=0; i < len; i++){
+    if(str[i] == org){
+      str[i] = replace;
+    }
+  }
+}

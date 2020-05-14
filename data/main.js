@@ -88,7 +88,9 @@ function graph(id, range, key, precision, array){
 function table(array){
 	var t = document.querySelector("table tbody");
 	t.innerHTML = "";
-
+	//The array arrives in ASC order, we want to display it in DESC
+	array.reverse();
+	
 	array.forEach(function(value, index, array){
 		var tr = document.createElement("tr");
 		var date_td = document.createElement("td");
@@ -191,7 +193,7 @@ function ajax(){
 		alert("Failed to get weather.");
 	});
 	
-	request.open("GET", "json_no_frost?"+ new Date().getTime());
+	request.open("GET", "/json?"+ new Date().getTime());
 	request.send();
 	
 }
@@ -222,7 +224,6 @@ window.onload = function(){
 			document.getElementById("auto_refresh").classList.add("red");
 			document.getElementById("auto_refresh").classList.remove("gray");
 		}
-		console.log("TEST");
 	});
 
 	document.getElementById("reset_record").addEventListener('click', function(){
@@ -240,7 +241,7 @@ window.onload = function(){
 				alert("Failed to reset records.");
 			});
 	
-			request.open("POST", "json_reset_record");
+			request.open("POST", "/reset_records");
 			request.send();
 		}
 	});
@@ -260,7 +261,7 @@ window.onload = function(){
 				alert("Failed to reset historical data.");
 			});
 	
-			request.open("POST", "json_reset_history");
+			request.open("POST", "/reset_history");
 			request.send();
 		}
 	});
@@ -276,7 +277,8 @@ window.onload = function(){
 			document.getElementById("txt_remote").value = request.response.remote;
 			document.getElementById("time_time").value = request.response.time.substring(11,16);
 			document.getElementById("date_date").value = request.response.time.substring(0,10);
-
+			document.getElementById("number_altitude").value = request.response.altitude;
+			
 			document.getElementById("settings").style.display = "block";
 			document.getElementById("loading").style.display = "none";
 		});
@@ -285,7 +287,7 @@ window.onload = function(){
 			alert("Failed to get settings.");
 		});
 
-		request.open("POST", "json_get_settings");
+		request.open("POST", "/get_settings");
 		request.send();
 	});
 
@@ -308,7 +310,7 @@ window.onload = function(){
 			alert("Failed to save settings.");
 		});
 
-		request.open("POST", "json_save_settings");
+		request.open("POST", "/save_settings");
 
 		//form data to send
 		var obj = {
@@ -317,8 +319,9 @@ window.onload = function(){
 			"remote":document.getElementById("txt_remote").value,
 			"station":document.getElementById("txt_station").value,
 			"date":document.getElementById("date_date").value,
-			"time":document.getElementById("time_time").value
-		}
+			"time":document.getElementById("time_time").value,
+			"altitude":document.getElementById("number_altitude").value
+		};
 		var query = "";
 		request.send(query);
 	});
