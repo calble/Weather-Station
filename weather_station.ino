@@ -139,12 +139,12 @@ void setup() {
 
   hour = 0;
 
-  record.maxTemperature = 0;
-  record.minTemperature = 0;
-  record.maxPressure = 0;
-  record.minPressure = 0;
-  record.maxHumidity = 0;
-  record.minHumidity = 0;
+  record.maxTemperature = -200;
+  record.minTemperature = 200;
+  record.maxPressure = -20000;
+  record.minPressure = 20000;
+  record.maxHumidity = -200;
+  record.minHumidity = 200;
 
   setting.ssid[0] = '\0';
   setting.password[0] = '\0';
@@ -210,8 +210,8 @@ void handleJson() {
     char b[200];
     char t[18];
     formatTime(history[i].time, t);
-    Serial.printf("History: #%d(Time %s, Temp: %d, Hum: %d, Pres: %d)\n", i, t, history[i].temperature, history[i].humidity, history[i].pressure);
-    sprintf(b, h, t, history[i].temperature, history[i].humidity, history[i].pressure / 100.0);
+    Serial.printf("History: #%d(Time %s, Temp: %d, Hum: %d, Pres: %d)\n", i, t, cToF(history[i].temperature), history[i].humidity, history[i].pressure);
+    sprintf(b, h, t, cToF(history[i].temperature), history[i].humidity, history[i].pressure / 100.0);
     if(i != 23){
       strcat(b, ",\n");
     }
@@ -323,7 +323,10 @@ void sensorUpdate() {
 
 void hourlyUpdate() {
   for (int i = 23; i > 0; i--) {
-    history[i - 1] = history[i];
+    history[i-1].temperature = history[i].temperature;
+    history[i-1].pressure = history[i].pressure;
+    history[i-1].humidity = history[i].humidity;
+    history[i-1].time = history[i].time;
   }
 
   history[23].temperature = currentTemperature;
