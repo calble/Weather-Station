@@ -269,7 +269,73 @@ void handleStaticFiles() {
 }
 
 void handleSaveSettings() {
+  String message = "success";
+  
+  if(server.hasArg("action") && server.arg("action") == "save"){
+    boolean shouldRestart = false;
+    
+    if(server.hasArg("ssid") && server.arg("ssid") != ""){
+      String ssid = server.arg("ssid");
+      if(ssid.length() > 32){
+        ssid = ssid.substring(0, 32);
+      }
+      strcpy(setting.ssid, ssid.c_str());
+      shouldRestart = true;  
+    }
+    if(server.hasArg("password") && server.arg("password") != ""){
+      String password = server.arg("password");
+      if(password.length() > 64){
+        password = password.substring(0, 64);
+      }
+      strcpy(setting.password, password.c_str());
+      shouldRestart = true;  
+    }
 
+    if(server.hasArg("remote") && server.hasArg("station") && server.hasArg("altitude") && server.hasArg("date") && server.hasArg("time")){
+      String remote = server.arg("remote");
+      String station = server.arg("station");
+
+      if(station.length() > 32){
+        station = station.substring(0,32);
+      }
+      strcpy(setting.station, station.c_str());
+      
+      if(remote.length() > 64){
+        remote = remote.substring(0,64);
+      }
+      strcpy(setting.remote, remote.c_str());
+      
+      float altitude = atof(server.arg("altitude").c_str());
+      setting.altitude = altitude;
+
+      String nDate = server.arg("date");
+      String nTime = server.arg("time");
+      
+      int y = atoi(nDate.substring(0,4).c_str());
+      int m = atoi(nDate.substring(5,7).c_str());
+      int d = atoi(nDate.substring(8,10).c_str());
+      int h = atoi(nTime.substring(0,2).c_str());
+      int M = atoi(nTime.substring(3,5).c_str());
+      
+      RtcDateTime newDateTime(y,m,d,h,M,0);
+      Rtc.SetDateTime(newDateTime);
+     
+    }else{
+      message = "missing fields";
+    }
+    saveSettings(RtcEeprom, &setting);
+    
+    if(shouldRestart){
+      Serial.println("SSID or Password have changed, restarting.");
+      server.send(200,"text/json","{\"response\":\"rebooting\"}");
+      server.client().stop();
+      ESP.restart();
+      return;
+    }
+    server.send(200,"text/json","{\"response\":\""+message+"\"}");
+    return;
+  }
+  server.send(400, "text/json", "{\"response\":\"Bad Request\"}");
 }
 
 void handleResetRecords() {
@@ -282,7 +348,11 @@ void handleResetRecords() {
     record.minHumidity = 206;
 
     resetHighLow(RtcEeprom);
+
+    server.send(200, "text/json", "{\"response\":\"success\"}");
+    return;
   }
+  server.send(400, "text/json", "{\"response\":\"bad request\"}");
 }
 
 void handleResetHistory() {
@@ -293,8 +363,12 @@ void handleResetHistory() {
       history[i].humidity = 0;
       history[i].pressure = 0;
     }
+    hour = 0;
     resetHistory(RtcEeprom);
+    server.send(200, "text/json", "{\"response\":\"success\"}");
+    return;
   }
+   server.send(400, "text/json", "{\"response\":\"bad request\"}");
 }
 
 void sensorUpdate() {
@@ -385,7 +459,7 @@ int pressureAtSealevel() {
 }
 
 void handleGetSettings() {
-  char* tpl = "{\"station\":\"%s\",\n\"remote\":\"%s\",\n\"altitude\":%0.2f,\n\"time\":\"%04d-%02d-%02d %02d:%02d\"}";
+  char* tpl = (char*)"{\"station\":\"%s\",\n\"remote\":\"%s\",\n\"altitude\":%0.2f,\n\"time\":\"%04d-%02d-%02d %02d:%02d\"}";
   char buffer[250];
   RtcDateTime d = Rtc.GetDateTime();
   sprintf(buffer, tpl, setting.station, setting.remote, setting.altitude, d.Year(), d.Month(), d.Day(), d.Hour(), d.Minute());

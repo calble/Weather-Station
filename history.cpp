@@ -154,3 +154,11 @@ void restoreRecords(EepromAt24c32<TwoWire> RtcEeprom, Record *record){
 void resetHistory(EepromAt24c32<TwoWire> RtcEeprom){
   
 }
+
+void restoreSettings(EepromAt24c32<TwoWire> RtcEeprom, Setting *setting){
+  
+}
+
+void saveSettings(EepromAt24c32<TwoWire> RtcEeprom, Setting *setting){
+  
+}

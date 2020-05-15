@@ -242,7 +242,8 @@ window.onload = function(){
 			});
 	
 			request.open("POST", "/reset_records");
-			request.send();
+			request.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+			request.send("action=reset");
 		}
 	});
 
@@ -262,7 +263,8 @@ window.onload = function(){
 			});
 	
 			request.open("POST", "/reset_history");
-			request.send();
+			request.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+			request.send("action=reset");
 		}
 	});
 
@@ -303,7 +305,21 @@ window.onload = function(){
 		var request = new XMLHttpRequest();
 		request.responseType = "json";
 		request.addEventListener("load", function(){
-			ajax();
+			if(request.response.response != "success"){
+				document.querySelector("body").style.backgroundColor = "red";
+				alert(request.response.response);
+				if(request.response.response == "rebooting"){
+					document.getElementById("loading").style.display = "block";
+					document.getElementById("settings").style.display = "none";
+					setTimeout(function(){
+						location.reload();
+					}, 30 * 1000);
+				}else{
+					ajax();
+				}
+			}else{
+				ajax();
+			}
 		});
 
 		request.addEventListener("error", function(){
@@ -322,7 +338,8 @@ window.onload = function(){
 			"time":document.getElementById("time_time").value,
 			"altitude":document.getElementById("number_altitude").value
 		};
-		var query = "";
+		var query = "action=save&ssid="+obj.ssid.trim()+"&password="+obj.password.trim()+"&remote="+obj.remote.trim()+"&station="+obj.station.trim()+"&date="+obj.date+"&time="+obj.time+"&altitude="+obj.altitude;
+		request.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
 		request.send(query);
 	});
 
