@@ -101,9 +101,9 @@ function table(array){
 		
 		date_td.innerHTML = reformatDate2(value.time);
 		time_td.innerHTML = reformatTime(value.time.substring(11,16));
-		temp_td.innerHTML = value.temperature;
-		humidity_td.innerHTML = value.humidity;
-		pressure_td.innerHTML = value.barometer;
+		temp_td.innerHTML = value.temperature + "&deg;F";
+		humidity_td.innerHTML = value.humidity + "%";
+		pressure_td.innerHTML = value.barometer + "mBar";
 
 		tr.appendChild(date_td);
 		tr.appendChild(time_td);
