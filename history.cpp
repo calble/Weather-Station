@@ -7,99 +7,7 @@
 #include "eeprom.h"
 #include "settings.h"
 
-void validateMemory(EepromAt24c32<TwoWire> RtcEeprom){
-  Serial.println("Validating Memory");
-  byte c[32];
-
-  for(int i=0; i < 32; i++){
-    c[i] = 255;
-  }
-
-  for(int i=0; i < 256; i++){
-    RtcEeprom.SetMemory(i*32, c, 32);
-    Serial.printf("Page: %d\n", i);
-    delay(10);
-    yield();
-  }
-  
-  for(int i=0; i < 256; i++){
-    RtcEeprom.GetMemory(i * 32, c, 32);
-    for(int j=0; j < 32; j++){
-      if(c[j] != 255){
-        Serial.printf("Failed Location: %d, value: %d\n", i*32+j, c[j]);
-      }
-      c[j] = 0;
-    }
-    yield();
-  }
-}
-
-void debug(EepromAt24c32<TwoWire> RtcEeprom){
-  byte b[8];
-  float f;
-  int d;
-
-  Serial.println("\nDEBUG:");
-  RtcEeprom.GetMemory(ADDR_HIGH_TEMP, b, 4);
-  bytesToFloat(b, &f);
-  Serial.printf("High Temp: %.2f [%d,%d,%d,%d]\n", f, b[0], b[1], b[2], b[3]);
-  
-  RtcEeprom.GetMemory(ADDR_LOW_TEMP, b, 4);
-  bytesToFloat(b, &f);
-  Serial.printf("Low Temp: %.2f [%d,%d,%d,%d]\n", f, b[0], b[1], b[2], b[3]);
-  
-  RtcEeprom.GetMemory(ADDR_HIGH_HUMIDITY, b, 4);
-  bytesToFloat(b, &f);
-  Serial.printf("High Humididty: %.2f [%d,%d,%d,%d]\n", f, b[0], b[1], b[2], b[3]);
-  
-  RtcEeprom.GetMemory(ADDR_LOW_HUMIDITY, b, 4);
-  bytesToFloat(b, &f);
-  Serial.printf("Low Humidity: %.2f [%d,%d,%d,%d]\n", f, b[0], b[1], b[2], b[3]);
-  
-  RtcEeprom.GetMemory(ADDR_HIGH_PRESSURE, b, 4);
-  bytesToInt(b, &d);
-  Serial.printf("High Pressure: %d [%d,%d,%d,%d]\n", d, b[0], b[1], b[2], b[3]);
-  
-  RtcEeprom.GetMemory(ADDR_LOW_PRESSURE, b, 4);
-  bytesToInt(b, &d);
-  Serial.printf("Low Pressure: %.2d [%d,%d,%d,%d]\n", d, b[0], b[1], b[2], b[3]);
-
-  char xx[32];
-  RtcEeprom.GetMemory(ADDR_STATION, (uint8_t*)xx, 31);
-  xx[31] = '\0';
-  Serial.printf("Station: %s\n", xx);
-  
-  RtcEeprom.GetMemory(ADDR_REMOTE, (uint8_t*)xx, 31);
-  xx[31] = '\0';
-  Serial.printf("Remote: %s\n", xx);
-  
-  int offsetMeasure = 0;
-  int offsetTime = 0;
-  long tBuffer;
-  int p;
-  float t,h;
-  long tt;
-  
-  for(int i=0; i < 24; i++){
-    RtcEeprom.GetMemory(ADDR_PRESSURE + offsetMeasure, b, 4);
-    bytesToInt(b, &p);
-    Serial.println(p);
-    RtcEeprom.GetMemory(ADDR_HUMIDITY + offsetMeasure, b, 4);
-    bytesToFloat(b, &h);
-    RtcEeprom.GetMemory(ADDR_TEMP + offsetMeasure, b, 4);
-    bytesToFloat(b, &t);
-    RtcEeprom.GetMemory(ADDR_TIME + offsetTime, b, 8);
-    bytesToLong(b, &tt);
-
-    Serial.printf("IDX: %d, Pressure: %d, Temp: %.2f, Humidity: %.2f, Time: %ld\n", i, p, t, h, tt);
-    offsetTime += 8;
-    offsetMeasure += 4;
-  } 
-}
-
 void clearEEPROM(EepromAt24c32<TwoWire> RtcEeprom){
-  Serial.println("Validating EEPROM");
-  validateMemory(RtcEeprom);
   
   Serial.println("Clearing EEPROM");
   byte clear[32];
@@ -121,7 +29,7 @@ void clearEEPROM(EepromAt24c32<TwoWire> RtcEeprom){
   resetHighLow(RtcEeprom);
   
   Serial.printf("EEPROM Cleared! Set pin %d to HIGH and restart.", CLEAR_MEMORY);
-  debug(RtcEeprom);
+  
   //infinite loop to signal memory is cleared
   while(true){
      delay(500);
@@ -131,23 +39,34 @@ void clearEEPROM(EepromAt24c32<TwoWire> RtcEeprom){
   }
 }
 
-void restore(EepromAt24c32<TwoWire> RtcEeprom){
-  
-}
-
-void save(EepromAt24c32<TwoWire> RtcEeprom, DataPoint *history){
-  
+void saveHistory(EepromAt24c32<TwoWire> RtcEeprom, DataPoint *history){
+  byte buffer[sizeof(DataPoint) * 24];
+  historyToBytes(history, buffer);
+  writeBytesToEeprom(RtcEeprom, ADDR_HISTORY, buffer, sizeof(DataPoint) * 24);
 }
 
 void resetHighLow(EepromAt24c32<TwoWire> RtcEeprom) {
- 
-}
+  Record r;
+  r.maxTemperature = -201;
+  r.minTemperature = 202;
+  r.maxPressure = -200003;
+  r.minPressure = 200004;
+  r.maxHumidity = -205;
+  r.minHumidity = 206;
 
-void saveRecords(EepromAt24c32<TwoWire> RtcEeprom, Record record[]){
+  byte buffer[sizeof(Record)];
   
+  recordToBytes(r, buffer); 
+  writeBytesToEeprom(RtcEeprom, ADDR_RECORD, buffer, sizeof(Record));
 }
 
-void restoreRecords(EepromAt24c32<TwoWire> RtcEeprom, Record *record){
+void saveRecords(EepromAt24c32<TwoWire> RtcEeprom, Record record){
+  byte buffer[sizeof(Record)];
+  recordToBytes(record, buffer);
+  writeBytesToEeprom(RtcEeprom, ADDR_HISTORY, buffer, sizeof(Record));
+}
+
+void restoreRecords(EepromAt24c32<TwoWire> RtcEeprom, Record record){
   
 }
 
@@ -155,10 +74,16 @@ void resetHistory(EepromAt24c32<TwoWire> RtcEeprom){
   
 }
 
-void restoreSettings(EepromAt24c32<TwoWire> RtcEeprom, Setting *setting){
+void restoreHistory(EepromAt24c32<TwoWire> RtcEeprom, DataPoint* history){
   
 }
 
-void saveSettings(EepromAt24c32<TwoWire> RtcEeprom, Setting *setting){
+void restoreSettings(EepromAt24c32<TwoWire> RtcEeprom, Setting setting){
   
+}
+
+void saveSettings(EepromAt24c32<TwoWire> RtcEeprom, Setting setting){
+  byte buffer[sizeof(Setting)];
+  settingToBytes(setting, buffer);
+  writeBytesToEeprom(RtcEeprom, ADDR_SETTING, buffer, sizeof(Setting));
 }

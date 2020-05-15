@@ -62,6 +62,10 @@ void setup() {
   pinMode(BUILTIN_LED2, OUTPUT); // Initialize the BUILTIN_LED2 pin as an output
   pinMode(CLEAR_MEMORY, INPUT);
 
+  Serial.printf("DataPoint Size: %d\n", sizeof(DataPoint));
+  Serial.printf("Setting Setting: %d\n", sizeof(Setting));
+  Serial.printf("Record Record: %d\n", sizeof(Record));
+  
   //TODO: add check to see if eeprom ssid is null, then enter setup mode.
   WiFi.mode(WIFI_STA);
   WiFi.begin("NohaNet-C", "B3B6A7AF71D34DF28A88F25BFD");
@@ -162,7 +166,9 @@ void setup() {
     history[i].pressure = 0;
   }
 
-  restore(RtcEeprom);
+  restoreHistory(RtcEeprom, history);
+  restoreSettings(RtcEeprom, setting);
+  restoreRecords(RtcEeprom, record);
   flashIP();
 }
 
@@ -323,7 +329,7 @@ void handleSaveSettings() {
     }else{
       message = "missing fields";
     }
-    saveSettings(RtcEeprom, &setting);
+    saveSettings(RtcEeprom, setting);
     
     if(shouldRestart){
       Serial.println("SSID or Password have changed, restarting.");
@@ -408,12 +414,12 @@ void sensorUpdate() {
   }
 
   if (flag) {
-    saveRecords(RtcEeprom, &record);
+    saveRecords(RtcEeprom, record);
   }
 }
 
 void hourlyUpdate() {
-  for (int i = 23; i > 0; i--) {
+  for (int i = 1; i < 24; i++) {
     history[i-1].temperature = history[i].temperature;
     history[i-1].pressure = history[i].pressure;
     history[i-1].humidity = history[i].humidity;
@@ -425,7 +431,7 @@ void hourlyUpdate() {
   history[23].humidity = currentHumidity;
   history[23].time = Rtc.GetDateTime().TotalSeconds();
   hour++;
-  save(RtcEeprom, history);
+  saveHistory(RtcEeprom, history);
 }
 
 void flashIP() {

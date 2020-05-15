@@ -1,18 +1,10 @@
 #ifndef SETTINGS
 #define SETTINGS
 
-#define ADDR_STATION        0   //One Page
-#define ADDR_REMOTE         32  //One Page
-#define ADDR_TIME           64  //Eight Pages
-#define ADDR_TEMP           320 //Three Pages
-#define ADDR_HUMIDITY       448 //Three Pages
-#define ADDR_PRESSURE       576 //Three Pages
-#define ADDR_HIGH_TEMP      704
-#define ADDR_LOW_TEMP       708
-#define ADDR_HIGH_PRESSURE  712
-#define ADDR_LOW_PRESSURE   716
-#define ADDR_HIGH_HUMIDITY  720
-#define ADDR_LOW_HUMIDITY   724
+#define ADDR_SETUP           0   //  1 byte, if zero run setup, otherwise run like normal
+#define ADDR_RECORD         32   // 24 bytes
+#define ADDR_SETTING        64   //204 bytes
+#define ADDR_HISTORY        288  //384 bytes
 
 #define BUILTIN_LED1 2 //GPIO2
 #define BUILTIN_LED2 16//GPIO16
