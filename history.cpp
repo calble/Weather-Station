@@ -146,3 +146,11 @@ void resetHighLow(EepromAt24c32<TwoWire> RtcEeprom) {
 void saveRecords(EepromAt24c32<TwoWire> RtcEeprom, Record record[]){
   
 }
+
+void restoreRecords(EepromAt24c32<TwoWire> RtcEeprom, Record *record){
+  
+}
+
+void resetHistory(EepromAt24c32<TwoWire> RtcEeprom){
+  
+}

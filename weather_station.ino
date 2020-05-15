@@ -148,7 +148,7 @@ void setup() {
 
   setting.ssid[0] = '\0';
   setting.password[0] = '\0';
-  setting.altitude = 0;
+  setting.altitude = -100;
   setting.station[0] = 'S';
   setting.station[1] = '\0';
   setting.remote[0] = 'R';
@@ -273,11 +273,28 @@ void handleSaveSettings() {
 }
 
 void handleResetRecords() {
+  if(server.hasArg("action") && server.arg("action") == "reset"){
+    record.maxTemperature = -201;
+    record.minTemperature = 202;
+    record.maxPressure = -200003;
+    record.minPressure = 200004;
+    record.maxHumidity = -205;
+    record.minHumidity = 206;
 
+    resetHighLow(RtcEeprom);
+  }
 }
 
 void handleResetHistory() {
-
+  if(server.hasArg("action") && server.arg("action") == "reset"){
+    for (int i = 0; i < 24; i++) {
+      history[i].time = 0;
+      history[i].temperature = 0;
+      history[i].humidity = 0;
+      history[i].pressure = 0;
+    }
+    resetHistory(RtcEeprom);
+  }
 }
 
 void sensorUpdate() {
@@ -368,7 +385,11 @@ int pressureAtSealevel() {
 }
 
 void handleGetSettings() {
-
+  char* tpl = "{\"station\":\"%s\",\n\"remote\":\"%s\",\n\"altitude\":%0.2f,\n\"time\":\"%04d-%02d-%02d %02d:%02d\"}";
+  char buffer[250];
+  RtcDateTime d = Rtc.GetDateTime();
+  sprintf(buffer, tpl, setting.station, setting.remote, setting.altitude, d.Year(), d.Month(), d.Day(), d.Hour(), d.Minute());
+  server.send(200,"text/json", buffer);
 }
 
 void remoteUpdate() {
