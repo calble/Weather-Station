@@ -139,12 +139,12 @@ void setup() {
 
   hour = 0;
 
-  record.maxTemperature = -200;
-  record.minTemperature = 200;
-  record.maxPressure = -20000;
-  record.minPressure = 20000;
-  record.maxHumidity = -200;
-  record.minHumidity = 200;
+  record.maxTemperature = -201;
+  record.minTemperature = 202;
+  record.maxPressure = -200003;
+  record.minPressure = 200004;
+  record.maxHumidity = -205;
+  record.minHumidity = 206;
 
   setting.ssid[0] = '\0';
   setting.password[0] = '\0';
@@ -200,7 +200,7 @@ void handleJson() {
   RtcDateTime t = Rtc.GetDateTime();
   char time[18];
   sprintf(time, "%04d-%02d-%02d %02d:%02d", t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute());
-  sprintf(buffer, jsonStart,  setting.station, cToF(currentTemperature), currentHumidity, currentPressure / 100.0, getPressureRange(currentPressure), getTrend(), time, getFrostRisk(), cToF(record.minTemperature), cToF(record.maxTemperature), record.minHumidity, record.maxHumidity, record.minPressure / 100.0, record.maxPressure / 100.0);
+  sprintf(buffer, jsonStart,  setting.station, cToF(currentTemperature), currentHumidity, currentPressure / 100.0, getPressureRange(currentPressure), getTrend(), time, getFrostRisk(), cToF(record.maxTemperature), cToF(record.minTemperature), record.maxHumidity, record.minHumidity, record.maxPressure / 100.0, record.minPressure / 100.0);
   len += strlen(buffer);
   server.sendContent(buffer, strlen(buffer));
 
