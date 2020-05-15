@@ -200,7 +200,7 @@ void handleJson() {
   RtcDateTime t = Rtc.GetDateTime();
   char time[18];
   sprintf(time, "%04d-%02d-%02d %02d:%02d", t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute());
-  sprintf(buffer, jsonStart,  setting.station, cToF(currentTemperature), currentHumidity, currentPressure / 100.0, getPressureRange(currentPressure), getTrend(), time, getFrostRisk(), record.minTemperature, record.maxTemperature, record.minHumidity, record.maxHumidity, record.minPressure / 100.0, record.maxPressure / 100.0);
+  sprintf(buffer, jsonStart,  setting.station, cToF(currentTemperature), currentHumidity, currentPressure / 100.0, getPressureRange(currentPressure), getTrend(), time, getFrostRisk(), cToF(record.minTemperature), cToF(record.maxTemperature), record.minHumidity, record.maxHumidity, record.minPressure / 100.0, record.maxPressure / 100.0);
   len += strlen(buffer);
   server.sendContent(buffer, strlen(buffer));
 
