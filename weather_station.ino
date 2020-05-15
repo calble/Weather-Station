@@ -191,9 +191,9 @@ void handleJson() {
   server.send(200, "text/json", "");
   Serial.println("Handling JSON");
   float p = currentPressure / 100.0;
-  char *jsonStart = (char*)"{'station':'%s',\n'current':{'temperature':%0.2f,\n'humidity':%0.2f,\n'barometer':%0.2f,\n'pressure':'%s',\n'trend':'%s',\n'time':'%s','frost':%s\n},\n'records':{'temperature':{'high':%0.2f,'low':%0.2f},\n'humidity':{'high':%0.2f,'low':%0.2f},\n'barometer':{'high':%0.2f,'low':%0.2f}\n},'history':[\n";
-  char *h = (char*)"\t{'time':'%s','temperature':%0.2f,'humidity':%0.2f,'barometer':%0.2f}";
-  char *jsonEnd = (char*)"]\n}";
+  char *jsonStart = (char*)"{'station':'%s',\n'current':{\n\t'temperature':%0.2f,\n\t'humidity':%0.2f,\n\t'barometer':%0.2f,\n\t'pressure':'%s',\n\t'trend':'%s',\n\t'time':'%s',\n\t'frost':%s\n},\n'records':{\n\t'temperature':{'high':%0.2f,'low':%0.2f},\n\t'humidity':{'high':%0.2f,'low':%0.2f},\n\t'barometer':{'high':%0.2f,'low':%0.2f}\n},\n'history':[\n";
+  char *h = (char*)"\t{\n\t\t'time':'%s',\n\t\t'temperature':%0.2f,\n\t\t'humidity':%0.2f,\n\t\t'barometer':%0.2f\n\t}";
+  char *jsonEnd = (char*)"\n]\n}";
   
   replaceStr(jsonStart, '\'', '\"');
   replaceStr(h, '\'', '\"');
