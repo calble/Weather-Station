@@ -65,22 +65,36 @@ void setup() {
   Serial.printf("DataPoint Size: %d\n", sizeof(DataPoint));
   Serial.printf("Setting Setting: %d\n", sizeof(Setting));
   Serial.printf("Record Record: %d\n", sizeof(Record));
-  
-  //TODO: add check to see if eeprom ssid is null, then enter setup mode.
-  WiFi.mode(WIFI_STA);
-  WiFi.begin("NohaNet-C", "B3B6A7AF71D34DF28A88F25BFD");
 
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
+  //Setup EEPROM
+  RtcEeprom.Begin();
+  restoreSettings(RtcEeprom, &setting);
+  
+  //Check memory location 0, if it is zero enter wifi setup mode, otherwise use stored settings.
+  if(RtcEeprom.GetMemory(0) == 0){
+    IPAddress local_IP(192,168,1,1);
+    IPAddress gateway(192,168,1,0);
+    IPAddress subnet(255,255,255,0);
+    WiFi.softAPConfig(local_IP, gateway, subnet);
+    WiFi.softAP("n-weather");
+  }else{
+    WiFi.mode(WIFI_STA);
+    WiFi.begin(setting.ssid, setting.password);
+    
+    while (WiFi.status() != WL_CONNECTED) {
+      delay(500);
+      Serial.print(".");
+    }
+    Serial.println("Connected.");
+    Serial.print("Local IP: ");
+    Serial.println(WiFi.localIP());
   }
-  Serial.println("Connected.");
-  Serial.print("Local IP: ");
-  Serial.println(WiFi.localIP());
   server.begin();
   MDNS.begin("weather");
   MDNS.addService("http", "tcp", 80);
   MDNS.addService("weather", "tcp", 80);
+  MDNS.addService("nSmart","tcp",80);
+  
   Wire.begin();
   delay(30);
   if (!bmp.begin(0x76, &Wire)) {
@@ -90,6 +104,7 @@ void setup() {
       delay(500);
       digitalWrite(BUILTIN_LED2, HIGH);
       delay(500);
+      yield();
     }
   }
 
@@ -99,68 +114,7 @@ void setup() {
     Serial.println("RTC IsDateTimeValid False!");
   }
   Rtc.SetIsRunning(true);
-  
-  //Setup EEPROM
-  RtcEeprom.Begin();
 
-  //Testing EEPROM functions
-//  byte data[64];
-//  for(int i=0; i < 64; i++){
-//    data[i] = i+1;
-//  }
-//  writeBytesToEeprom(RtcEeprom, 22, data, 64);
-//  delay(10);
-//  for(int i=0; i < 64; i++){
-//    byte b = RtcEeprom.GetMemory(22+i);
-//    if(data[i] != b){
-//      Serial.printf("Write Failure at %d, %d != %d\n", i+22, data[i], b);
-//    }else{
-//      Serial.printf("Write OKAY    at %d, %d != %d\n", i+22, data[i], b);
-//    }
-//  }
-//  byte data2[16];
-//  readBytesFromEeprom(RtcEeprom, 22, data2, 64);
-//  
-//  for(int i=0; i < 64; i++){
-//    if(data[i] != data2[i]){
-//      Serial.printf("Failure at %d, %d != %d\n", i, data[i], data2[i]);
-//    }
-//  }
-//    Record a;
-//    a.minTemperature = -5;
-//    a.maxTemperature = 5;
-//    a.minHumidity = 7;
-//    a.maxHumidity = 100;
-//    a.minPressure = 100000;
-//    a.maxPressure = 200000;
-//    byte c[sizeof(Record)];
-//    recordToBytes(a, c);
-//    writeBytesToEeprom(RtcEeprom, ADDR_RECORD, c, sizeof(Record));
-//    delay(10);
-//    Record b;
-//    byte d [sizeof(Record)];
-//    readBytesFromEeprom(RtcEeprom, ADDR_RECORD, d, sizeof(Record));
-//    bytesToRecord(d, &b);
-//    Serial.printf("TEST RECORD: %f, %f, %f, %f, %d, %d\n", b.minTemperature, b.maxTemperature, b.minHumidity, b.maxHumidity, b.minPressure, b.maxPressure);
-//  for (int i = 0; i < 24; i++) {
-//    history[i].time = i;
-//    history[i].temperature = i;
-//    history[i].humidity = i;
-//    history[i].pressure = i;
-//  }
-//  byte a[sizeof(DataPoint)*24];
-//  historyToBytes(history, a);
-//  writeBytesToEeprom(RtcEeprom, ADDR_HISTORY, a, sizeof(DataPoint) * 24);
-//  delay(10);
-//  DataPoint b[24];
-//  byte c[sizeof(DataPoint) * 24];
-//  readBytesFromEeprom(RtcEeprom, ADDR_HISTORY, c, sizeof(DataPoint) * 24);
-//  bytesToHistory(c, b);
-//
-//  for (int i = 0; i < 24; i++) {
-//    Serial.printf("HISTORY TEST #%d: %ld, %f, %f, %d\n", i, b[i].time, b[i].temperature, b[i].humidity, b[i].pressure);
-//  }
-  
   //Clear EEPROM if the pin is high 3 times in a row
 //   clearEEPROM(RtcEeprom);
   if (digitalRead(CLEAR_MEMORY) == LOW) {
@@ -202,29 +156,6 @@ void setup() {
   currentHumidity = 0;
 
   hour = 0;
-
-  record.maxTemperature = -201;
-  record.minTemperature = 202;
-  record.maxPressure = -200003;
-  record.minPressure = 200004;
-  record.maxHumidity = -205;
-  record.minHumidity = 206;
-
-  setting.ssid[0] = '\0';
-  setting.password[0] = '\0';
-  setting.altitude = -100;
-  setting.station[0] = 'S';
-  setting.station[1] = '\0';
-  setting.remote[0] = 'R';
-  setting.remote[1] = '\0';
-
-
-  for (int i = 0; i < 24; i++) {
-    history[i].time = 0;
-    history[i].temperature = 0;
-    history[i].humidity = 0;
-    history[i].pressure = 0;
-  }
   
   restoreHistory(RtcEeprom, history);
   //You must restore hour to the proper value or no historical data will be sent via JSON
@@ -236,7 +167,6 @@ void setup() {
     }
   }
   Serial.printf("Current HOUR: %d\n", hour);
-  restoreSettings(RtcEeprom, &setting);
   restoreRecords(RtcEeprom, &record);
   yield();
   Serial.println("HISTORY DATA:");
@@ -412,6 +342,11 @@ void handleSaveSettings() {
     
     if(shouldRestart){
       Serial.println("SSID or Password have changed, restarting.");
+      //If the SSID or Password has changed then set memory location 0 to a non zero value.
+      //This tells the device to start wifi using stored Settings.
+      //When memory address zero is zero, the wifi starts in AP mode so that it can be setup.
+      RtcEeprom.SetMemory(0, 255);
+      
       server.send(200,"text/json","{\"response\":\"rebooting\"}");
       server.client().stop();
       ESP.restart();
@@ -555,7 +490,20 @@ void handleGetSettings() {
 
 void remoteUpdate() {
   if (strlen(setting.remote) != 0) {
-    //TODO: Do the remote stuff
+    //Step 1: form JSON data
+//    char* fmt = (char*) "{\"station\":\"%s\", \"time\":\"%04d-%02d-%02d %02d:%02d\", \"currentTemperature\":%0.2f, \"currentHumidity\":%0.2f, \"currentPressure\":%0.2f, \"frost\":%s}";
+//    char buffer[1000];
+//    
+//    RtcDateTime d = Rtc.GetDateTime();
+//    sprintf(buffer, fmt, setting.station, d.Year(), d.Month(), d.Day(), d.Hour(), d.Minute(), currentTemperature, currentHumidity, currentPressure, getFrostRisk());
+//    
+    //Step 2: resolve mDNS host if needed
+//    if(setting.remote, (char*)".local"){
+//      
+//    }else{
+//      
+//    }
+    //Step 3: send data to remote server
   }
 }
 

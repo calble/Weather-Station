@@ -164,7 +164,7 @@ body.frost{
 }
 
 #settings button {
-	width: 49%;
+	width: 100%;
 	margin: 10px 0.5% 10px 0.5%;
 }
 #loading {
@@ -280,6 +280,8 @@ body.frost{
 		margin: 10px 0.05% 0px 0.05%;
 	}
 	
-	
+	#settings button {
+		width: 49%;
+	}
 	
 }
