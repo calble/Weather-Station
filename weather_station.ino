@@ -142,6 +142,25 @@ void setup() {
 //    readBytesFromEeprom(RtcEeprom, ADDR_RECORD, d, sizeof(Record));
 //    bytesToRecord(d, &b);
 //    Serial.printf("TEST RECORD: %f, %f, %f, %f, %d, %d\n", b.minTemperature, b.maxTemperature, b.minHumidity, b.maxHumidity, b.minPressure, b.maxPressure);
+//  for (int i = 0; i < 24; i++) {
+//    history[i].time = i;
+//    history[i].temperature = i;
+//    history[i].humidity = i;
+//    history[i].pressure = i;
+//  }
+//  byte a[sizeof(DataPoint)*24];
+//  historyToBytes(history, a);
+//  writeBytesToEeprom(RtcEeprom, ADDR_HISTORY, a, sizeof(DataPoint) * 24);
+//  delay(10);
+//  DataPoint b[24];
+//  byte c[sizeof(DataPoint) * 24];
+//  readBytesFromEeprom(RtcEeprom, ADDR_HISTORY, c, sizeof(DataPoint) * 24);
+//  bytesToHistory(c, b);
+//
+//  for (int i = 0; i < 24; i++) {
+//    Serial.printf("HISTORY TEST #%d: %ld, %f, %f, %d\n", i, b[i].time, b[i].temperature, b[i].humidity, b[i].pressure);
+//  }
+  
   //Clear EEPROM if the pin is high 3 times in a row
 //   clearEEPROM(RtcEeprom);
   if (digitalRead(CLEAR_MEMORY) == LOW) {
@@ -206,11 +225,29 @@ void setup() {
     history[i].humidity = 0;
     history[i].pressure = 0;
   }
-
-//  restoreHistory(RtcEeprom, history);
+  
+  restoreHistory(RtcEeprom, history);
+  //You must restore hour to the proper value or no historical data will be sent via JSON
+  for(int i=23; i >=0; i--){
+    if(history[i].time != 0){
+      hour++;
+    }else{
+      break;
+    }
+  }
+  Serial.printf("Current HOUR: %d\n", hour);
   restoreSettings(RtcEeprom, &setting);
   restoreRecords(RtcEeprom, &record);
-  Serial.println("Records Restored!");
+  yield();
+  Serial.println("HISTORY DATA:");
+  for (int i = 0; i < 24; i++) {
+    Serial.printf("#%d: %ld, %f, %f, %d\n",history[i].time, history[i].temperature, history[i].humidity, history[i].pressure);
+  }
+  Serial.println("Settings:");
+  Serial.printf("SSID: %s, PASSWORD: %s, REMOTE: %s, STATION: %s, ALTITUDE: %f\n", setting.ssid, setting.password, setting.remote, setting.station, setting.altitude);
+  Serial.println("Records:");
+  Serial.printf("MAX T: %f, MIN T: %f, MAX H: %f, MIN H: %f, MAX P: %d, MIN P: %d\n", record.maxTemperature, record.minTemperature, record.maxHumidity, record.minHumidity, record.maxPressure, record.minPressure);
+  
   flashIP();
 }
 
@@ -461,6 +498,7 @@ void sensorUpdate() {
 }
 
 void hourlyUpdate() {
+  Serial.println("Hourly Update");
   for (int i = 1; i < 24; i++) {
     history[i-1].temperature = history[i].temperature;
     history[i-1].pressure = history[i].pressure;
