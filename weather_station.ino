@@ -99,10 +99,51 @@ void setup() {
     Serial.println("RTC IsDateTimeValid False!");
   }
   Rtc.SetIsRunning(true);
+  
   //Setup EEPROM
   RtcEeprom.Begin();
 
+  //Testing EEPROM functions
+//  byte data[64];
+//  for(int i=0; i < 64; i++){
+//    data[i] = i+1;
+//  }
+//  writeBytesToEeprom(RtcEeprom, 22, data, 64);
+//  delay(10);
+//  for(int i=0; i < 64; i++){
+//    byte b = RtcEeprom.GetMemory(22+i);
+//    if(data[i] != b){
+//      Serial.printf("Write Failure at %d, %d != %d\n", i+22, data[i], b);
+//    }else{
+//      Serial.printf("Write OKAY    at %d, %d != %d\n", i+22, data[i], b);
+//    }
+//  }
+//  byte data2[16];
+//  readBytesFromEeprom(RtcEeprom, 22, data2, 64);
+//  
+//  for(int i=0; i < 64; i++){
+//    if(data[i] != data2[i]){
+//      Serial.printf("Failure at %d, %d != %d\n", i, data[i], data2[i]);
+//    }
+//  }
+//    Record a;
+//    a.minTemperature = -5;
+//    a.maxTemperature = 5;
+//    a.minHumidity = 7;
+//    a.maxHumidity = 100;
+//    a.minPressure = 100000;
+//    a.maxPressure = 200000;
+//    byte c[sizeof(Record)];
+//    recordToBytes(a, c);
+//    writeBytesToEeprom(RtcEeprom, ADDR_RECORD, c, sizeof(Record));
+//    delay(10);
+//    Record b;
+//    byte d [sizeof(Record)];
+//    readBytesFromEeprom(RtcEeprom, ADDR_RECORD, d, sizeof(Record));
+//    bytesToRecord(d, &b);
+//    Serial.printf("TEST RECORD: %f, %f, %f, %f, %d, %d\n", b.minTemperature, b.maxTemperature, b.minHumidity, b.maxHumidity, b.minPressure, b.maxPressure);
   //Clear EEPROM if the pin is high 3 times in a row
+//   clearEEPROM(RtcEeprom);
   if (digitalRead(CLEAR_MEMORY) == LOW) {
     delay(50);
     if (digitalRead(CLEAR_MEMORY) == LOW) {
@@ -166,9 +207,10 @@ void setup() {
     history[i].pressure = 0;
   }
 
-  restoreHistory(RtcEeprom, history);
-  restoreSettings(RtcEeprom, setting);
-  restoreRecords(RtcEeprom, record);
+//  restoreHistory(RtcEeprom, history);
+  restoreSettings(RtcEeprom, &setting);
+  restoreRecords(RtcEeprom, &record);
+  Serial.println("Records Restored!");
   flashIP();
 }
 
@@ -238,7 +280,7 @@ void handleJson() {
   
   for(int i=len; i < 4000; i+=100){
     server.sendContent(blank, 100);
-    Serial.printf("%d...\n", i);
+//    Serial.printf("%d...\n", i);
   }
   if(len % 100 != 0){
     server.sendContent(blank, len % 100);

@@ -26,5 +26,6 @@ void bytesToSetting(byte* data, Setting* setting);
 void bytesToRecord(byte* data, Record* record);
 void bytesToHistory(byte* data, DataPoint* datapoints);
 
+void printBytes(byte data[], int count);
 boolean shouldRunSetup(EepromAt24c32<TwoWire> w);
 #endif

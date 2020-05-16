@@ -241,43 +241,95 @@ void bytesToHistory(byte* data, DataPoint* datapoints){
 }
 
 void writeBytesToEeprom(EepromAt24c32<TwoWire> w, int address, byte data[], int count){
+  Serial.printf("Writing %d bytes from address %d\n", count, address);
   //bites to write to get to a 32 byte offset
   int pre = 32 - address % 32;
-  w.SetMemory(address, data, pre);
+  //If we are writing less than 32 bytes, don't write too much.
+  pre = (pre > count)?count:pre;
   
+  if(pre > 0){
+    Serial.printf("Prewriting %d bytes from address: %d\n", pre, address);
+    w.SetMemory(address, data, pre);
+    if(w.LastError() != 0){
+      Serial.printf("Location #1, Error code: %d\n", w.LastError());
+    }
+    delay(10);
+  }
   //write chunks of 32bytes
   int remaining = count - pre;
   int chunks = remaining / 32;
   
-  if(remaining > 0){  
+  if(remaining > 0){
+    data += pre;  
     for(int i=0; i < chunks; i++){
+      Serial.printf("Writing Chunk #%d at address %d\n", i, address + pre + i * 32);
       w.SetMemory(address + pre + i * 32, data, 32);
+      if(w.LastError() != 0){
+        Serial.printf("Location #1, Error code: %d\n", w.LastError());
+      }
+      data += 32;
+      delay(10);
     }
   }
 
   //write remaining bytes
   int leftOver = remaining % 32;
-  w.SetMemory(address + pre + chunks * 32, data, leftOver);
+  if(leftOver > 0){
+    Serial.printf("Writing %d leftover bytes from address %d\n", leftOver, address + pre + chunks * 32);
+    w.SetMemory(address + pre + chunks * 32, data, leftOver);
+    if(w.LastError() != 0){
+      Serial.printf("Location #1, Error code: %d\n", w.LastError());
+    }
+    delay(10);
+  }
 }
 
 void readBytesFromEeprom(EepromAt24c32<TwoWire> w, int address, byte* data, int count){
+  Serial.printf("Reading %d bytes from address %d\n", count, address);
   //bites to write to get to a 32 byte offset
   int pre = 32 - address % 32;
-  w.GetMemory(address, data, pre);
-  
+  if(pre != 0){
+    Serial.printf("Prefetching %d bytes from address: %d\n", pre, address);
+    w.GetMemory(address, data, pre);
+    if(w.LastError() != 0){
+      Serial.printf("Location #1, Error code: %d\n", w.LastError());
+    }
+  }
   //write chunks of 32bytes
   int remaining = count - pre;
   int chunks = remaining / 32;
   
   if(remaining > 0){  
+    data += pre;
     for(int i=0; i < chunks; i++){
+      Serial.printf("Reading Chunk #%d at address %d\n", i, address + pre + i * 32);
       w.GetMemory(address + pre + i * 32, data, 32);
+      if(w.LastError() != 0){
+        Serial.printf("Location #1, Error code: %d\n", w.LastError());
+      }
+      data += 32;
     }
   }
 
   //write remaining bytes
   int leftOver = remaining % 32;
-  w.GetMemory(address + pre + chunks * 32, data, leftOver);
+  if(leftOver > 0){
+    Serial.printf("Reading %d leftover bytes from address %d\n", leftOver, address + pre + chunks * 32);
+    w.GetMemory(address + pre + chunks * 32, data, leftOver);
+    if(w.LastError() != 0){
+      Serial.printf("Location #1, Error code: %d\n", w.LastError());
+    }
+  }
+}
+
+void printBytes(byte data[], int count){
+  for(int i=0; i < count; i++){
+    Serial.printf("%03d ", data[i]);
+    if(i % 8 == 0 && i != 0){
+      Serial.println();
+    }
+  }
+  Serial.println();
 }
 
 boolean shouldRunSetup(EepromAt24c32<TwoWire> w){

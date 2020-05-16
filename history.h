@@ -7,8 +7,8 @@ void validateMemory(EepromAt24c32<TwoWire> RtcEeprom);
 void debug(EepromAt24c32<TwoWire> RtcEeprom);
 void clearEEPROM(EepromAt24c32<TwoWire> RtcEeprom);
 
-void restoreRecords(EepromAt24c32<TwoWire> RtcEeprom, Record record);
-void restoreSettings(EepromAt24c32<TwoWire> RtcEeprom, Setting setting);
+void restoreRecords(EepromAt24c32<TwoWire> RtcEeprom, Record *record);
+void restoreSettings(EepromAt24c32<TwoWire> RtcEeprom, Setting *setting);
 void restoreHistory(EepromAt24c32<TwoWire> RtcEeprom, DataPoint *history);
 
 void saveHistory(EepromAt24c32<TwoWire> RtcEeprom, DataPoint dp[]);
