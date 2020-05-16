@@ -70,7 +70,7 @@ void saveRecords(EepromAt24c32<TwoWire> RtcEeprom, Record record){
   recordToBytes(record, buffer);
   Serial.println("Bytes Written from record memory:");
   printBytes(buffer, sizeof(Record));
-  writeBytesToEeprom(RtcEeprom, ADDR_HISTORY, buffer, sizeof(Record));
+  writeBytesToEeprom(RtcEeprom, ADDR_RECORD, buffer, sizeof(Record));
 }
 
 void restoreRecords(EepromAt24c32<TwoWire> RtcEeprom, Record* record){

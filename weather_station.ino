@@ -450,6 +450,7 @@ void handleResetHistory() {
     }
     hour = 0;
     resetHistory(RtcEeprom);
+    hourlyUpdate();
     server.send(200, "text/json", "{\"response\":\"success\"}");
     return;
   }
