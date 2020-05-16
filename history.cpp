@@ -32,13 +32,14 @@ void clearEEPROM(EepromAt24c32<TwoWire> RtcEeprom){
   Serial.printf("EEPROM Cleared! Set pin %d to HIGH and restart.", CLEAR_MEMORY);
   
   //infinite loop to signal memory is cleared
-  while(true){
+  for(int i=0; i < 20; i++){
      delay(500);
      digitalWrite(BUILTIN_LED2, HIGH);
      delay(500);
      digitalWrite(BUILTIN_LED2, LOW);
      yield();
   }
+  ESP.restart();
 }
 
 void saveHistory(EepromAt24c32<TwoWire> RtcEeprom, DataPoint *history){
