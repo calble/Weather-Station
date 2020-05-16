@@ -11,17 +11,18 @@ Upon completed boot LED1 will be on and LED2 will be off.
 ## Resetting EEPROM
 EEPROM is reset by holding GPIO 3 LOW (Ground).  A message will be printed to the serial monitor about 
 resetting progress.  During reset LED1 will be off and LED2 will flash at each of the 256 page
-clears. This pattern looks like the LED is mostly on, with short blinks off. Upon completion LED1 will be off and LED2 will flash on and off at a rate of 2Hz.
+clears. This pattern looks like the LED is mostly on, with short blinks off. Upon completion LED1 will be off and LED2 will flash on and off at a rate of 2Hz for 20 times and then reboot into wifi setup mode.
 
 ## URL Enpoints
 * / --> GET The main html page for the application
-* /reset --> POST to this endpoint to reset the high/low pressure and temperature readings.
+* /get_settings --> POST returns a JSON object with the station, altitude, and remote.
+* /save_setttings --> POST saves setting information.  If ssid or password are sent the system will reboot into wifi setup mode.
+* /reset_records --> POST resets the high and low records
+* /reset_history --> POST resets the historical data
 * /json --> GET the JSON representation of what is on /.
-* /main.css --> GET the CSS for the / page.
-* /graph.js --> GET the javascript code for rendering the graph on the root page.
 
 ## File System
-The jar file in the resources directory must be put in the propert Arduino directory to upload
+The jar file in the resources directory must be put in the proper Arduino directory to upload
 the files.
 
 Make sure you use one of the supported versions of Arduino IDE and have ESP8266 core installed.
