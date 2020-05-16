@@ -185,6 +185,10 @@ body.frost{
 	background-color: lightgray;
 }
 
+#barometer_level {
+	display: block;
+}
+
 @media screen and (min-width: 960px){
 	body>div{
 		max-width: 960px;

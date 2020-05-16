@@ -127,7 +127,7 @@ function ajax(){
 		document.getElementById("temperature").innerHTML = request.response.current.temperature;
 		document.getElementById("humidity").innerHTML = request.response.current.humidity;
 		document.getElementById("barometer").innerHTML = request.response.current.barometer;
-		document.getElementById("barometer_range").innerHTML = request.response.current.pressure;
+		document.getElementById("barometer_level").innerHTML = request.response.current.pressure;
 		document.getElementById("trend").innerHTML = request.response.current.trend;
 		
 		if(request.response.current.frost === true){
