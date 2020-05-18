@@ -175,7 +175,7 @@ void setup() {
     Serial.printf("#%d: %ld, %f, %f, %d\n",history[i].time, history[i].temperature, history[i].humidity, history[i].pressure);
   }
   Serial.println("Settings:");
-  Serial.printf("SSID: %s, PASSWORD: %s, REMOTE: %s, STATION: %s, ALTITUDE: %f\n", setting.ssid, setting.password, setting.remote, setting.station, setting.altitude);
+  Serial.printf("SSID: %s, PASSWORD: XXX, REMOTE: %s, STATION: %s, ALTITUDE: %f\n", setting.ssid, setting.remote, setting.station, setting.altitude);
   Serial.println("Records:");
   Serial.printf("MAX T: %f, MIN T: %f, MAX H: %f, MIN H: %f, MAX P: %d, MIN P: %d\n", record.maxTemperature, record.minTemperature, record.maxHumidity, record.minHumidity, record.maxPressure, record.minPressure);
   
