@@ -8,7 +8,7 @@
 
 #define BUILTIN_LED1 2 //GPIO2
 #define BUILTIN_LED2 16//GPIO16
-#define CLEAR_MEMORY 3
+#define CLEAR_MEMORY D6
 
 struct DataPoint {
   //Time is the number of seconds since 2000.

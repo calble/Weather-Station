@@ -117,16 +117,17 @@ void setup() {
 
   //Clear EEPROM if the pin is high 3 times in a row
 //   clearEEPROM(RtcEeprom);
-  if (digitalRead(CLEAR_MEMORY) == LOW) {
+  if (digitalRead(CLEAR_MEMORY) == HIGH) {
     delay(50);
-    if (digitalRead(CLEAR_MEMORY) == LOW) {
+    if (digitalRead(CLEAR_MEMORY) == HIGH) {
       delay(50);
-      if (digitalRead(CLEAR_MEMORY) == LOW) {
+      if (digitalRead(CLEAR_MEMORY) == HIGH) {
+        Serial.println("CLEAR PIN was HIGH, RESETTING MEMORY");
         clearEEPROM(RtcEeprom);
       }
     }
   } else {
-    Serial.println("CLEAR PIN was HIGH, not reseting memory.");
+    Serial.println("CLEAR PIN was LOW, not reseting memory.");
   }
 
   //Setup server

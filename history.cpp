@@ -39,7 +39,6 @@ void clearEEPROM(EepromAt24c32<TwoWire> RtcEeprom){
      digitalWrite(BUILTIN_LED2, LOW);
      yield();
   }
-  ESP.restart();
 }
 
 void saveHistory(EepromAt24c32<TwoWire> RtcEeprom, DataPoint *history){
