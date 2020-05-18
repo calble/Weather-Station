@@ -1,0 +1,6 @@
+Quantity,Designators,Value,Device,Package
+1,BB1,,BME280 Breakout Board,BME280 Breakout Board
+1,BB2,,DS3231 Breakout Board,DS3231 Breakout Board
+2,"J1, J2",,Generic Pin Header 2.54mm 1x02 ⌀0.9mm,Pin Header 2.54mm 1x02 ⌀0.9mm
+1,R2,,R-THT-0207,R-THT-0207
+1,U1,ESP8266 (12E),ESP8266 (12E),ESP8266 DIP
