@@ -215,7 +215,11 @@ void handleJson() {
   //JSON Start
   RtcDateTime t = Rtc.GetDateTime();
   char time[18];
-  sprintf(time, "%04d-%02d-%02d %02d:%02d", t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute());
+  int hour = t.Hour();
+  if(t.Hour() == 0){
+    hour = 12;
+  }
+  sprintf(time, "%04d-%02d-%02d %02d:%02d", t.Year(), t.Month(), t.Day(), hour, t.Minute());
   sprintf(buffer, jsonStart,  setting.station, cToF(currentTemperature), currentHumidity, currentPressure / 100.0, getPressureRange(currentPressure), getTrend(), time, getFrostRisk(), cToF(record.maxTemperature), cToF(record.minTemperature), record.maxHumidity, record.minHumidity, record.maxPressure / 100.0, record.minPressure / 100.0);
   len += strlen(buffer);
   server.sendContent(buffer, strlen(buffer));
@@ -485,7 +489,11 @@ void handleGetSettings() {
   char* tpl = (char*)"{\"station\":\"%s\",\n\"remote\":\"%s\",\n\"altitude\":%0.2f,\n\"time\":\"%04d-%02d-%02d %02d:%02d\"}";
   char buffer[250];
   RtcDateTime d = Rtc.GetDateTime();
-  sprintf(buffer, tpl, setting.station, setting.remote, setting.altitude, d.Year(), d.Month(), d.Day(), d.Hour(), d.Minute());
+  int hour  = d.Hour();
+  if(d.Hour() == 0){
+    hour = 12;
+  }
+  sprintf(buffer, tpl, setting.station, setting.remote, setting.altitude, d.Year(), d.Month(), d.Day(), hour, d.Minute());
   server.send(200,"text/json", buffer);
 }
 
