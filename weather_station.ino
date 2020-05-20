@@ -172,7 +172,7 @@ void setup() {
   yield();
   Serial.println("HISTORY DATA:");
   for (int i = 0; i < 24; i++) {
-    Serial.printf("#%d: %ld, %f, %f, %d\n",history[i].time, history[i].temperature, history[i].humidity, history[i].pressure);
+    Serial.printf("#%02d: %ld, %f, %f, %d\n",i, history[i].time, history[i].temperature, history[i].humidity, history[i].pressure);
   }
   Serial.println("Settings:");
   Serial.printf("SSID: %s, PASSWORD: XXX, REMOTE: %s, STATION: %s, ALTITUDE: %f\n", setting.ssid, setting.remote, setting.station, setting.altitude);
@@ -215,11 +215,11 @@ void handleJson() {
   //JSON Start
   RtcDateTime t = Rtc.GetDateTime();
   char time[18];
-  int hour = t.Hour();
+  int currentHour = t.Hour();
   if(t.Hour() == 0){
-    hour = 12;
+    currentHour = 12;
   }
-  sprintf(time, "%04d-%02d-%02d %02d:%02d", t.Year(), t.Month(), t.Day(), hour, t.Minute());
+  sprintf(time, "%04d-%02d-%02d %02d:%02d", t.Year(), t.Month(), t.Day(), currentHour, t.Minute());
   sprintf(buffer, jsonStart,  setting.station, cToF(currentTemperature), currentHumidity, currentPressure / 100.0, getPressureRange(currentPressure), getTrend(), time, getFrostRisk(), cToF(record.maxTemperature), cToF(record.minTemperature), record.maxHumidity, record.minHumidity, record.maxPressure / 100.0, record.minPressure / 100.0);
   len += strlen(buffer);
   server.sendContent(buffer, strlen(buffer));
